@@ -58,11 +58,33 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(prefix)
   );
 
+  const isOnboardingRoute = pathname.startsWith('/onboarding');
+
   // Authenticated users should not see auth pages
   if (session && isAuthRoute) {
     return NextResponse.redirect(
       new URL('/dashboard', request.url)
     );
+  }
+
+  // If we have a session, fetch the user's profile org id only for protected or onboarding routes
+  if (session && (isProtectedRoute || isOnboardingRoute)) {
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', session.user.id)
+      .single();
+
+    // If the user has no organization, force onboarding (unless already there)
+    if (!profileErr && profile?.organization_id === null && !isOnboardingRoute) {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
+    }
+    // Prevent users with an organization from accessing onboarding
+    if (!profileErr && profile?.organization_id !== null && isOnboardingRoute) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // If the user *has* an organization and is trying to hit an auth page, keep original redirect (handled above)
   }
 
   // Unauthenticated users cannot access protected pages
