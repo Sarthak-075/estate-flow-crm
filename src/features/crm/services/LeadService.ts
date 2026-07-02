@@ -17,6 +17,26 @@ export class DuplicateEmailError extends Error {
   }
 }
 
+export interface Lead {
+  id: string;
+  organization_id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  source: string | null;
+  status: string;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export class LeadNotFoundError extends Error {
+  constructor(leadId: string) {
+    super(`Lead '${leadId}' was not found.`);
+    this.name = 'LeadNotFoundError';
+  }
+}
+
 export class LeadService {
   /**
    * Creates a new lead.
@@ -96,6 +116,32 @@ export class LeadService {
     return data.id;
   }
 
+/**
+ * Retrieves a single lead by ID.
+ */
+public async getLead(
+  leadId: string
+): Promise<Lead> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', leadId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new LeadNotFoundError(leadId);
+    }
+
+    throw new Error(
+      `Failed to retrieve lead: ${error.message}`
+    );
+  }
+
+  return data as Lead;
+}
   /**
    * Validates the lead name.
    */
