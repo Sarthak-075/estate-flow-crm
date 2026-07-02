@@ -1,203 +1,232 @@
-/**
- * Audit Service
- *
- * Centralized service for writing audit logs.
- * All services must use this service instead of direct database inserts.
- */
+// src/lib/audit/auditService.ts
 
 import { createClient } from '@/lib/supabase/server';
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
- * Audit action types - represents all possible audit events in the system.
+ * Every auditable action in the system.
  */
-export const AuditAction = {
-  // Profile actions
-  PROFILE_CREATED: 'PROFILE_CREATED',
-  PROFILE_UPDATED: 'PROFILE_UPDATED',
-  PROFILE_DELETED: 'PROFILE_DELETED',
+export enum AuditAction {
+  PROFILE_CREATED = 'PROFILE_CREATED',
+  PROFILE_UPDATED = 'PROFILE_UPDATED',
 
-  // Organization actions
-  ORGANIZATION_CREATED: 'ORGANIZATION_CREATED',
-  ORGANIZATION_UPDATED: 'ORGANIZATION_UPDATED',
-  ORGANIZATION_DELETED: 'ORGANIZATION_DELETED',
+  ORGANIZATION_CREATED = 'ORGANIZATION_CREATED',
+  ORGANIZATION_UPDATED = 'ORGANIZATION_UPDATED',
 
-  // Lead actions
-  LEAD_CREATED: 'LEAD_CREATED',
-  LEAD_UPDATED: 'LEAD_UPDATED',
-  LEAD_DELETED: 'LEAD_DELETED',
-  LEAD_CONVERTED: 'LEAD_CONVERTED',
+  TEAM_MEMBER_CREATED = 'TEAM_MEMBER_CREATED',
+  TEAM_MEMBER_UPDATED = 'TEAM_MEMBER_UPDATED',
+  TEAM_MEMBER_REMOVED = 'TEAM_MEMBER_REMOVED',
 
-  // Contact actions
-  CONTACT_CREATED: 'CONTACT_CREATED',
-  CONTACT_UPDATED: 'CONTACT_UPDATED',
-  CONTACT_DELETED: 'CONTACT_DELETED',
+  ROLE_CREATED = 'ROLE_CREATED',
+  ROLE_UPDATED = 'ROLE_UPDATED',
+  ROLE_DELETED = 'ROLE_DELETED',
 
-  // Pipeline actions
-  PIPELINE_CREATED: 'PIPELINE_CREATED',
-  PIPELINE_UPDATED: 'PIPELINE_UPDATED',
-  PIPELINE_DELETED: 'PIPELINE_DELETED',
+  LEAD_CREATED = 'LEAD_CREATED',
+  LEAD_UPDATED = 'LEAD_UPDATED',
+  LEAD_DELETED = 'LEAD_DELETED',
 
-  // Pipeline Stage actions
-  PIPELINE_STAGE_CREATED: 'PIPELINE_STAGE_CREATED',
-  PIPELINE_STAGE_UPDATED: 'PIPELINE_STAGE_UPDATED',
-  PIPELINE_STAGE_DELETED: 'PIPELINE_STAGE_DELETED',
+  CONTACT_CREATED = 'CONTACT_CREATED',
+  CONTACT_UPDATED = 'CONTACT_UPDATED',
+  CONTACT_DELETED = 'CONTACT_DELETED',
 
-  // Deal actions
-  DEAL_CREATED: 'DEAL_CREATED',
-  DEAL_UPDATED: 'DEAL_UPDATED',
-  DEAL_MOVED: 'DEAL_MOVED',
-  DEAL_WON: 'DEAL_WON',
-  DEAL_LOST: 'DEAL_LOST',
-  DEAL_DELETED: 'DEAL_DELETED',
+  PIPELINE_CREATED = 'PIPELINE_CREATED',
+  PIPELINE_UPDATED = 'PIPELINE_UPDATED',
+  PIPELINE_DELETED = 'PIPELINE_DELETED',
 
-  // Activity actions
-  ACTIVITY_CREATED: 'ACTIVITY_CREATED',
-  ACTIVITY_UPDATED: 'ACTIVITY_UPDATED',
-  ACTIVITY_DELETED: 'ACTIVITY_DELETED',
+  PIPELINE_STAGE_CREATED = 'PIPELINE_STAGE_CREATED',
+  PIPELINE_STAGE_UPDATED = 'PIPELINE_STAGE_UPDATED',
+  PIPELINE_STAGE_DELETED = 'PIPELINE_STAGE_DELETED',
 
-  // Team Member actions
-  TEAM_MEMBER_ADDED: 'TEAM_MEMBER_ADDED',
-  TEAM_MEMBER_REMOVED: 'TEAM_MEMBER_REMOVED',
-  TEAM_MEMBER_ROLE_CHANGED: 'TEAM_MEMBER_ROLE_CHANGED',
+  DEAL_CREATED = 'DEAL_CREATED',
+  DEAL_UPDATED = 'DEAL_UPDATED',
+  DEAL_DELETED = 'DEAL_DELETED',
 
-  // Role actions
-  ROLE_CREATED: 'ROLE_CREATED',
-  ROLE_UPDATED: 'ROLE_UPDATED',
-  ROLE_DELETED: 'ROLE_DELETED',
-} as const;
+  DEAL_MOVED = 'DEAL_MOVED',
+  DEAL_WON = 'DEAL_WON',
+  DEAL_LOST = 'DEAL_LOST',
 
-export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
+  ACTIVITY_CREATED = 'ACTIVITY_CREATED',
+  ACTIVITY_UPDATED = 'ACTIVITY_UPDATED',
+  ACTIVITY_DELETED = 'ACTIVITY_DELETED',
+}
 
 /**
- * Resource types that can be audited.
+ * Resources that can be audited.
  */
-export const ResourceType = {
-  PROFILE: 'profile',
-  ORGANIZATION: 'organization',
-  LEAD: 'lead',
-  CONTACT: 'contact',
-  PIPELINE: 'pipeline',
-  PIPELINE_STAGE: 'pipeline_stage',
-  DEAL: 'deal',
-  ACTIVITY: 'activity',
-  TEAM_MEMBER: 'team_member',
-  ROLE: 'role',
-} as const;
+export enum ResourceType {
+  PROFILE = 'profile',
+  ORGANIZATION = 'organization',
 
-export type ResourceType = (typeof ResourceType)[keyof typeof ResourceType];
+  TEAM_MEMBER = 'team_member',
+  ROLE = 'role',
+
+  LEAD = 'lead',
+  CONTACT = 'contact',
+
+  PIPELINE = 'pipeline',
+  PIPELINE_STAGE = 'pipeline_stage',
+
+  DEAL = 'deal',
+  ACTIVITY = 'activity',
+}
 
 /**
- * Input for creating an audit log entry.
+ * Payload accepted by createAuditLog().
  */
 export interface CreateAuditLogInput {
   organizationId: string;
   actorId: string;
+
   action: AuditAction;
+
   resourceType: ResourceType;
   resourceId: string;
-  before?: Record<string, unknown>;
-  after?: Record<string, unknown>;
-  ipAddress?: string;
+
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+
+  ipAddress?: string | null;
 }
 
 /**
- * Error thrown when audit log creation fails.
+ * Audit service specific error.
  */
 export class AuditLogError extends Error {
-  constructor(message: string, public readonly cause?: Error) {
+  public readonly cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
     super(message);
+
     this.name = 'AuditLogError';
+    this.cause = cause;
   }
 }
 
-// ============================================================================
-// Core Function
-// ============================================================================
-
 /**
- * Creates an audit log entry in the database.
+ * Writes a single audit log entry.
  *
- * @param input - The audit log data
- * @throws {AuditLogError} If the database insert fails
+ * All application services should use this function instead of writing
+ * directly to the audit_logs table.
  */
-export async function createAuditLog(input: CreateAuditLogInput): Promise<void> {
+export async function createAuditLog(
+  input: CreateAuditLogInput,
+): Promise<void> {
   const supabase = await createClient();
+
+  const {
+    organizationId,
+    actorId,
+    action,
+    resourceType,
+    resourceId,
+    before = null,
+    after = null,
+    ipAddress = null,
+  } = input;
 
   const { error } = await supabase
     .from('audit_logs')
     .insert({
-      organization_id: input.organizationId,
-      actor_id: input.actorId,
-      action: input.action,
-      resource_type: input.resourceType,
-      resource_id: input.resourceId,
-      before: input.before ?? null,
-      after: input.after ?? null,
-      ip_address: input.ipAddress ?? null,
+      organization_id: organizationId,
+      actor_id: actorId,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      before,
+      after,
+      ip_address: ipAddress,
     });
 
   if (error) {
     throw new AuditLogError(
       `Failed to create audit log: ${error.message}`,
-      error
+      error,
     );
   }
 }
-
 // ============================================================================
-// Convenience Helpers
+// Profile
 // ============================================================================
 
-/**
- * Logs a profile creation event.
- */
 export async function logProfileCreated(
   organizationId: string,
   actorId: string,
-  profileId: string
-): Promise<void> => {
+  profileId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.PROFILE_CREATED,
     resourceType: ResourceType.PROFILE,
     resourceId: profileId,
+    after,
   });
-};
+}
 
-/**
- * Logs an organization creation event.
- */
-export async function logOrganizationCreated(
+export async function logProfileUpdated(
+  organizationId: string,
   actorId: string,
-  organizationId: string
-): Promise<void> => {
+  profileId: string,
+  before?: Record<string, unknown>,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.PROFILE_UPDATED,
+    resourceType: ResourceType.PROFILE,
+    resourceId: profileId,
+    before,
+    after,
+  });
+}
+
+// ============================================================================
+// Organization
+// ============================================================================
+
+export async function logOrganizationCreated(
+  organizationId: string,
+  actorId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.ORGANIZATION_CREATED,
     resourceType: ResourceType.ORGANIZATION,
     resourceId: organizationId,
+    after,
   });
-};
+}
+
+export async function logOrganizationUpdated(
+  organizationId: string,
+  actorId: string,
+  before?: Record<string, unknown>,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.ORGANIZATION_UPDATED,
+    resourceType: ResourceType.ORGANIZATION,
+    resourceId: organizationId,
+    before,
+    after,
+  });
+}
 
 // ============================================================================
-// Lead Helpers
+// Leads
 // ============================================================================
 
-/**
- * Logs a lead creation event.
- */
 export async function logLeadCreated(
   organizationId: string,
   actorId: string,
   leadId: string,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -206,18 +235,15 @@ export async function logLeadCreated(
     resourceId: leadId,
     after,
   });
-};
+}
 
-/**
- * Logs a lead update event.
- */
 export async function logLeadUpdated(
   organizationId: string,
   actorId: string,
   leadId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -227,17 +253,14 @@ export async function logLeadUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs a lead deletion event.
- */
 export async function logLeadDeleted(
   organizationId: string,
   actorId: string,
   leadId: string,
-  before?: Record<string, unknown>
-): Promise<void> => {
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -246,40 +269,18 @@ export async function logLeadDeleted(
     resourceId: leadId,
     before,
   });
-};
-
-/**
- * Logs a lead conversion event.
- */
-export async function logLeadConverted(
-  organizationId: string,
-  actorId: string,
-  leadId: string,
-  contactId: string
-): Promise<void> => {
-  await createAuditLog({
-    organizationId,
-    actorId,
-    action: AuditAction.LEAD_CONVERTED,
-    resourceType: ResourceType.LEAD,
-    resourceId: leadId,
-    after: { contactId },
-  });
-};
+}
 
 // ============================================================================
-// Contact Helpers
+// Contacts
 // ============================================================================
 
-/**
- * Logs a contact creation event.
- */
 export async function logContactCreated(
   organizationId: string,
   actorId: string,
   contactId: string,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -288,18 +289,15 @@ export async function logContactCreated(
     resourceId: contactId,
     after,
   });
-};
+}
 
-/**
- * Logs a contact update event.
- */
 export async function logContactUpdated(
   organizationId: string,
   actorId: string,
   contactId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -309,17 +307,14 @@ export async function logContactUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs a contact deletion event.
- */
 export async function logContactDeleted(
   organizationId: string,
   actorId: string,
   contactId: string,
-  before?: Record<string, unknown>
-): Promise<void> => {
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -328,39 +323,34 @@ export async function logContactDeleted(
     resourceId: contactId,
     before,
   });
-};
-
+}
 // ============================================================================
-// Pipeline Helpers
+// Pipelines
 // ============================================================================
 
-/**
- * Logs a pipeline creation event.
- */
 export async function logPipelineCreated(
   organizationId: string,
   actorId: string,
-  pipelineId: string
-): Promise<void> => {
+  pipelineId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.PIPELINE_CREATED,
     resourceType: ResourceType.PIPELINE,
     resourceId: pipelineId,
+    after,
   });
-};
+}
 
-/**
- * Logs a pipeline update event.
- */
 export async function logPipelineUpdated(
   organizationId: string,
   actorId: string,
   pipelineId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -370,56 +360,51 @@ export async function logPipelineUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs a pipeline deletion event.
- */
 export async function logPipelineDeleted(
   organizationId: string,
   actorId: string,
-  pipelineId: string
-): Promise<void> => {
+  pipelineId: string,
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.PIPELINE_DELETED,
     resourceType: ResourceType.PIPELINE,
     resourceId: pipelineId,
+    before,
   });
-};
+}
 
 // ============================================================================
-// Pipeline Stage Helpers
+// Pipeline Stages
 // ============================================================================
 
-/**
- * Logs a pipeline stage creation event.
- */
 export async function logPipelineStageCreated(
   organizationId: string,
   actorId: string,
-  stageId: string
-): Promise<void> => {
+  stageId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.PIPELINE_STAGE_CREATED,
     resourceType: ResourceType.PIPELINE_STAGE,
     resourceId: stageId,
+    after,
   });
-};
+}
 
-/**
- * Logs a pipeline stage update event.
- */
 export async function logPipelineStageUpdated(
   organizationId: string,
   actorId: string,
   stageId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -429,38 +414,34 @@ export async function logPipelineStageUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs a pipeline stage deletion event.
- */
 export async function logPipelineStageDeleted(
   organizationId: string,
   actorId: string,
-  stageId: string
-): Promise<void> => {
+  stageId: string,
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.PIPELINE_STAGE_DELETED,
     resourceType: ResourceType.PIPELINE_STAGE,
     resourceId: stageId,
+    before,
   });
-};
+}
 
 // ============================================================================
-// Deal Helpers
+// Deals
 // ============================================================================
 
-/**
- * Logs a deal creation event.
- */
 export async function logDealCreated(
   organizationId: string,
   actorId: string,
   dealId: string,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -469,18 +450,15 @@ export async function logDealCreated(
     resourceId: dealId,
     after,
   });
-};
+}
 
-/**
- * Logs a deal update event.
- */
 export async function logDealUpdated(
   organizationId: string,
   actorId: string,
   dealId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -490,72 +468,14 @@ export async function logDealUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs a deal movement event (stage change).
- */
-export async function logDealMoved(
-  organizationId: string,
-  actorId: string,
-  dealId: string,
-  fromStageId: string,
-  toStageId: string
-): Promise<void> => {
-  await createAuditLog({
-    organizationId,
-    actorId,
-    action: AuditAction.DEAL_MOVED,
-    resourceType: ResourceType.DEAL,
-    resourceId: dealId,
-    before: { stageId: fromStageId },
-    after: { stageId: toStageId },
-  });
-};
-
-/**
- * Logs a deal won event.
- */
-export async function logDealWon(
-  organizationId: string,
-  actorId: string,
-  dealId: string
-): Promise<void> => {
-  await createAuditLog({
-    organizationId,
-    actorId,
-    action: AuditAction.DEAL_WON,
-    resourceType: ResourceType.DEAL,
-    resourceId: dealId,
-  });
-};
-
-/**
- * Logs a deal lost event.
- */
-export async function logDealLost(
-  organizationId: string,
-  actorId: string,
-  dealId: string
-): Promise<void> => {
-  await createAuditLog({
-    organizationId,
-    actorId,
-    action: AuditAction.DEAL_LOST,
-    resourceType: ResourceType.DEAL,
-    resourceId: dealId,
-  });
-};
-
-/**
- * Logs a deal deletion event.
- */
 export async function logDealDeleted(
   organizationId: string,
   actorId: string,
   dealId: string,
-  before?: Record<string, unknown>
-): Promise<void> => {
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -564,39 +484,85 @@ export async function logDealDeleted(
     resourceId: dealId,
     before,
   });
-};
+}
+
+export async function logDealMoved(
+  organizationId: string,
+  actorId: string,
+  dealId: string,
+  before?: Record<string, unknown>,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.DEAL_MOVED,
+    resourceType: ResourceType.DEAL,
+    resourceId: dealId,
+    before,
+    after,
+  });
+}
+
+export async function logDealWon(
+  organizationId: string,
+  actorId: string,
+  dealId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.DEAL_WON,
+    resourceType: ResourceType.DEAL,
+    resourceId: dealId,
+    after,
+  });
+}
+
+export async function logDealLost(
+  organizationId: string,
+  actorId: string,
+  dealId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.DEAL_LOST,
+    resourceType: ResourceType.DEAL,
+    resourceId: dealId,
+    after,
+  });
+}
 
 // ============================================================================
-// Activity Helpers
+// Activities
 // ============================================================================
 
-/**
- * Logs an activity creation event.
- */
 export async function logActivityCreated(
   organizationId: string,
   actorId: string,
-  activityId: string
-): Promise<void> => {
+  activityId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
     action: AuditAction.ACTIVITY_CREATED,
     resourceType: ResourceType.ACTIVITY,
     resourceId: activityId,
+    after,
   });
-};
+}
 
-/**
- * Logs an activity update event.
- */
 export async function logActivityUpdated(
   organizationId: string,
   actorId: string,
   activityId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>
-): Promise<void> => {
+  after?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -606,17 +572,14 @@ export async function logActivityUpdated(
     before,
     after,
   });
-};
+}
 
-/**
- * Logs an activity deletion event.
- */
 export async function logActivityDeleted(
   organizationId: string,
   actorId: string,
   activityId: string,
-  before?: Record<string, unknown>
-): Promise<void> => {
+  before?: Record<string, unknown>,
+): Promise<void> {
   await createAuditLog({
     organizationId,
     actorId,
@@ -625,4 +588,112 @@ export async function logActivityDeleted(
     resourceId: activityId,
     before,
   });
-};
+}
+
+// ============================================================================
+// Team Members
+// ============================================================================
+
+export async function logTeamMemberCreated(
+  organizationId: string,
+  actorId: string,
+  memberId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.TEAM_MEMBER_CREATED,
+    resourceType: ResourceType.TEAM_MEMBER,
+    resourceId: memberId,
+    after,
+  });
+}
+
+export async function logTeamMemberUpdated(
+  organizationId: string,
+  actorId: string,
+  memberId: string,
+  before?: Record<string, unknown>,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.TEAM_MEMBER_UPDATED,
+    resourceType: ResourceType.TEAM_MEMBER,
+    resourceId: memberId,
+    before,
+    after,
+  });
+}
+
+export async function logTeamMemberRemoved(
+  organizationId: string,
+  actorId: string,
+ memberId: string,
+  before?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.TEAM_MEMBER_REMOVED,
+    resourceType: ResourceType.TEAM_MEMBER,
+    resourceId: memberId,
+    before,
+  });
+}
+
+// ============================================================================
+// Roles
+// ============================================================================
+
+export async function logRoleCreated(
+  organizationId: string,
+  actorId: string,
+  roleId: string,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.ROLE_CREATED,
+    resourceType: ResourceType.ROLE,
+    resourceId: roleId,
+    after,
+  });
+}
+
+export async function logRoleUpdated(
+  organizationId: string,
+  actorId: string,
+  roleId: string,
+  before?: Record<string, unknown>,
+  after?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.ROLE_UPDATED,
+    resourceType: ResourceType.ROLE,
+    resourceId: roleId,
+    before,
+    after,
+  });
+}
+
+export async function logRoleDeleted(
+  organizationId: string,
+  actorId: string,
+  roleId: string,
+  before?: Record<string, unknown>,
+): Promise<void> {
+  await createAuditLog({
+    organizationId,
+    actorId,
+    action: AuditAction.ROLE_DELETED,
+    resourceType: ResourceType.ROLE,
+    resourceId: roleId,
+    before,
+  });
+}
