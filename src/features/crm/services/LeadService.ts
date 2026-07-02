@@ -142,6 +142,50 @@ public async getLead(
 
   return data as Lead;
 }
+
+/**
+ * Retrieves a paginated list of leads for an organization.
+ */
+public async getLeads(params: {
+  organizationId: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+}): Promise<Lead[]> {
+  const supabase = await createClient();
+
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 25;
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from('leads')
+    .select('*')
+    .eq('organization_id', params.organizationId);
+
+  if (params.status) {
+    query = query.eq('status', params.status);
+  }
+
+  if (params.search) {
+    query = query.ilike('name', `%${params.search}%`);
+  }
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new Error(
+      `Failed to retrieve leads: ${error.message}`
+    );
+  }
+
+  return (data ?? []) as Lead[];
+}
   /**
    * Validates the lead name.
    */
