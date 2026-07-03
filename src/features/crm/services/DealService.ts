@@ -123,6 +123,22 @@ const trimmedName = payload.name.trim();
     return dealId;
   }
 
+  public async getDeal(dealId: string): Promise<Deal> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('deals')
+    .select('*')
+    .eq('id', dealId)
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new DealNotFoundError(`Deal '${dealId}' was not found.`);
+    }
+    throw new Error(`Failed to retrieve deal: ${error.message}`);
+  }
+  return data as Deal;
+}
+
   // -----------------------------------------------------------------
   // Private helpers (mirroring ContactService pattern)
   // -----------------------------------------------------------------
