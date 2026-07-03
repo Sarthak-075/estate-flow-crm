@@ -157,6 +157,183 @@ export class ContactService {
   }
 
   /**
+   * Retrieves a paginated list of contacts.
+   */
+  public async getContacts(
+    params: {
+      organizationId: string;
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      leadId?: string;
+    }
+  ): Promise<Contact[]> {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from('contacts')
+      .select('*')
+      .eq('organization_id', params.organizationId);
+
+    if (params.leadId) {
+  query = query.eq('lead_id', params.leadId);
+}
+
+    if (params.search) {
+      query = query.or(
+        `first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%`
+      );
+    }
+
+    const page = Math.max(params.page ?? 1, 1);
+    const pageSize = Math.max(params.pageSize ?? 25, 1);
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to retrieve contacts: ${error.message}`);
+    }
+
+    return (data ?? []) as Contact[];
+  }
+
+  /**
+ * Updates an existing contact.
+ */
+public async updateContact(
+  contactId: string,
+  payload: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    title?: string;
+    department?: string;
+    leadId?: string | null;
+    assignedTo?: string | null;
+  }
+): Promise<void> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('Unauthenticated');
+  }
+
+  const { data: existingContact, error: getError } = await supabase
+    .from('contacts')
+    .select('*')
+    .eq('id', contactId)
+    .single();
+
+  if (getError) {
+    if (getError.code === 'PGRST116') {
+      throw new ContactNotFoundError(contactId);
+    }
+
+    throw new Error(
+      `Failed to retrieve contact: ${getError.message}`
+    );
+  }
+
+  const firstName =
+    payload.firstName ?? existingContact.first_name;
+
+  const lastName =
+    payload.lastName ?? existingContact.last_name;
+
+  this.validateNames(firstName, lastName);
+
+  const updates: Record<string, unknown> = {};
+
+  if (payload.firstName !== undefined) {
+    updates.first_name = payload.firstName.trim();
+  }
+
+  if (payload.lastName !== undefined) {
+    updates.last_name = payload.lastName.trim();
+  }
+
+  if (payload.email !== undefined) {
+    const email = payload.email.trim();
+
+    if (email !== existingContact.email) {
+      await this.checkDuplicateEmail(
+        email,
+        existingContact.organization_id,
+        supabase
+      );
+    }
+
+    updates.email = email;
+  }
+
+  if (payload.phone !== undefined) {
+    updates.phone = payload.phone;
+  }
+
+  if (payload.title !== undefined) {
+    updates.title = payload.title;
+  }
+
+  if (payload.department !== undefined) {
+    updates.department = payload.department;
+  }
+
+  if (payload.leadId !== undefined) {
+    updates.lead_id = payload.leadId;
+  }
+
+  if (payload.assignedTo !== undefined) {
+    updates.assigned_to = payload.assignedTo;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return;
+  }
+
+  updates.updated_at = new Date().toISOString();
+
+  const {
+    data: updatedContact,
+    error: updateError,
+  } = await supabase
+    .from('contacts')
+    .update(updates)
+    .eq('id', contactId)
+    .eq(
+      'organization_id',
+      existingContact.organization_id
+    )
+    .select('*')
+    .single();
+
+  if (updateError || !updatedContact) {
+    throw new Error(
+      `Contact update failed: ${updateError?.message ?? 'Unknown error'}`
+    );
+  }
+
+  await createAuditLog({
+    organizationId: existingContact.organization_id,
+    actorId: user.id,
+    action: AuditAction.CONTACT_UPDATED,
+    resourceType: ResourceType.CONTACT,
+    resourceId: contactId,
+    before: existingContact,
+    after: updatedContact,
+  });
+}
+
+  /**
    * Validates first and last names.
    */
   private validateNames(firstName: string, lastName: string): void {
