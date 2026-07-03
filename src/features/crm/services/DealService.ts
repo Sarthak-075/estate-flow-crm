@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { createAuditLog, AuditAction, ResourceType } from '@/lib/audit/auditService';
+import { createAuditLog, AuditAction, ResourceType, logDealMoved } from '@/lib/audit/auditService';
 
 export class DealValidationError extends Error {
   constructor(message: string) {
@@ -200,6 +200,7 @@ export class DealService {
       if (getError.code === 'PGRST116') {
         throw new DealNotFoundError(`Deal '${dealId}' was not found.`);
       }
+
       throw new Error(`Failed to retrieve deal: ${getError.message}`);
     }
 
@@ -232,7 +233,11 @@ export class DealService {
           .single();
 
         if (pipelineError) {
-          throw new DealValidationError(`Pipeline not found: ${payload.pipelineId}`);
+          if (pipelineError.code === 'PGRST116') {
+            throw new DealValidationError(`Pipeline not found: ${payload.pipelineId}`);
+          }
+
+          throw new Error(`Failed to retrieve pipeline: ${pipelineError.message}`);
         }
       }
       updates.pipeline_id = payload.pipelineId;
@@ -248,17 +253,49 @@ export class DealService {
           .single();
 
         if (stageError) {
-          throw new DealValidationError(`Stage not found: ${payload.stageId}`);
+          if (stageError.code === 'PGRST116') {
+            throw new DealValidationError(`Stage not found: ${payload.stageId}`);
+          }
+
+          throw new Error(`Failed to retrieve stage: ${stageError.message}`);
         }
       }
       updates.stage_id = payload.stageId;
     }
 
     if (payload.leadId !== undefined) {
+      if (payload.leadId) {
+        const { error } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('id', payload.leadId)
+          .eq('organization_id', existingDeal.organization_id)
+          .single();
+
+        if (error) {
+          throw new DealValidationError(`Lead not found or not in organization: ${payload.leadId}`);
+        }
+      }
+
       updates.lead_id = payload.leadId;
     }
 
     if (payload.contactId !== undefined) {
+      if (payload.contactId) {
+        const { error } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('id', payload.contactId)
+          .eq('organization_id', existingDeal.organization_id)
+          .single();
+
+        if (error) {
+          throw new DealValidationError(
+            `Contact not found or not in organization: ${payload.contactId}`
+          );
+        }
+      }
+
       updates.contact_id = payload.contactId;
     }
 
@@ -303,6 +340,78 @@ export class DealService {
     });
   }
 
+  public async moveDealStage(dealId: string, stageId: string): Promise<void> {
+    const supabase = await createClient();
+
+    // ---------- Authentication ----------
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('Unauthenticated');
+    }
+
+    const actorId = user.id;
+
+    // ---------- Retrieve existing deal ----------
+    const { data: existingDeal, error: getError } = await supabase
+      .from('deals')
+      .select('*')
+      .eq('id', dealId)
+      .single();
+
+    if (getError) {
+      if (getError.code === 'PGRST116') {
+        throw new DealNotFoundError(`Deal '${dealId}' was not found.`);
+      }
+      throw new Error(`Failed to retrieve deal: ${getError.message}`);
+    }
+    if (existingDeal.stage_id === stageId) {
+      return;
+    }
+
+    // ---------- Verify the new stage exists ----------
+    const { data: newStage, error: stageError } = await supabase
+      .from('pipeline_stages')
+      .select('id,pipeline_id')
+      .eq('id', stageId)
+      .single();
+
+    if (stageError) {
+      if (stageError.code === 'PGRST116') {
+        throw new DealValidationError(`Stage not found: ${stageId}`);
+      }
+
+      throw new Error(`Failed to retrieve stage: ${stageError.message}`);
+    }
+
+    // ---------- Ensure the stage belongs to the same pipeline as the deal ----------
+    if (newStage.pipeline_id !== existingDeal.pipeline_id) {
+      throw new DealValidationError('Stage does not belong to the deal pipeline.');
+    }
+
+    // ---------- Execute update ----------
+    const { data: updatedDeal, error: updateError } = await supabase
+      .from('deals')
+      .update({
+        stage_id: stageId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', dealId)
+      .eq('organization_id', existingDeal.organization_id)
+      .select('*')
+      .single();
+
+    if (updateError || !updatedDeal) {
+      throw new Error(`Failed to update deal stage: ${updateError?.message ?? 'Unknown error'}`);
+    }
+
+    // ---------- Audit ----------
+    await logDealMoved(existingDeal.organization_id, actorId, dealId, existingDeal, updatedDeal);
+  }
+
   // -----------------------------------------------------------------
   // Private helpers (mirroring ContactService pattern)
   // -----------------------------------------------------------------
@@ -329,7 +438,11 @@ export class DealService {
       .single();
 
     if (pipelineError) {
-      throw new DealValidationError(`Pipeline not found: ${payload.pipelineId}`);
+      if (pipelineError.code === 'PGRST116') {
+        throw new DealValidationError(`Pipeline not found: ${payload.pipelineId}`);
+      }
+
+      throw new Error(`Failed to retrieve pipeline: ${pipelineError.message}`);
     }
 
     const { error: stageError } = await supabase
@@ -340,7 +453,11 @@ export class DealService {
       .single();
 
     if (stageError) {
-      throw new DealValidationError(`Stage not found: ${payload.stageId}`);
+      if (stageError.code === 'PGRST116') {
+        throw new DealValidationError(`Stage not found: ${payload.stageId}`);
+      }
+
+      throw new Error(`Failed to retrieve stage: ${stageError.message}`);
     }
 
     if (payload.leadId) {
