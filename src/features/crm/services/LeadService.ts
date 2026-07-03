@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import {
   logLeadCreated,
+  createAuditLog,
+  AuditAction,
+  ResourceType,
 } from '@/lib/audit/auditService';
 
 export class LeadValidationError extends Error {
@@ -17,6 +20,13 @@ export class DuplicateEmailError extends Error {
   }
 }
 
+export class LeadNotFoundError extends Error {
+  constructor(leadId: string) {
+    super(`Lead '${leadId}' was not found.`);
+    this.name = 'LeadNotFoundError';
+  }
+}
+
 export interface Lead {
   id: string;
   organization_id: string;
@@ -28,13 +38,6 @@ export interface Lead {
   assigned_to: string | null;
   created_at: string;
   updated_at: string | null;
-}
-
-export class LeadNotFoundError extends Error {
-  constructor(leadId: string) {
-    super(`Lead '${leadId}' was not found.`);
-    this.name = 'LeadNotFoundError';
-  }
 }
 
 export class LeadService {
@@ -54,7 +57,6 @@ export class LeadService {
   ): Promise<string> {
     const supabase = await createClient();
 
-    // Get authenticated user
     const {
       data: { user },
       error: userError,
@@ -66,7 +68,6 @@ export class LeadService {
 
     const actorId = user.id;
 
-    // Validate input
     this.validateName(payload.name);
 
     const trimmedName = payload.name.trim();
@@ -77,7 +78,6 @@ export class LeadService {
       supabase
     );
 
-    // Insert lead
     const { data, error } = await supabase
       .from('leads')
       .insert({
@@ -98,7 +98,6 @@ export class LeadService {
       );
     }
 
-    // Audit log
     await logLeadCreated(
       organizationId,
       actorId,
@@ -115,78 +114,192 @@ export class LeadService {
 
     return data.id;
   }
+    /**
+   * Retrieves a single lead by ID.
+   */
+  public async getLead(
+    leadId: string
+  ): Promise<Lead> {
+    const supabase = await createClient();
 
-/**
- * Retrieves a single lead by ID.
- */
-public async getLead(
-  leadId: string
-): Promise<Lead> {
-  const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
 
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', leadId)
-    .single();
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new LeadNotFoundError(leadId);
+      }
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      throw new LeadNotFoundError(leadId);
+      throw new Error(
+        `Failed to retrieve lead: ${error.message}`
+      );
     }
 
-    throw new Error(
-      `Failed to retrieve lead: ${error.message}`
-    );
+    return data as Lead;
   }
 
-  return data as Lead;
-}
-
-/**
- * Retrieves a paginated list of leads for an organization.
- */
-public async getLeads(params: {
-  organizationId: string;
-  page?: number;
-  pageSize?: number;
-  search?: string;
-  status?: string;
-}): Promise<Lead[]> {
-  const supabase = await createClient();
-
-  const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 25;
-
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  let query = supabase
-    .from('leads')
-    .select('*')
-    .eq('organization_id', params.organizationId);
-
-  if (params.status) {
-    query = query.eq('status', params.status);
-  }
-
-  if (params.search) {
-    query = query.ilike('name', `%${params.search}%`);
-  }
-
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    throw new Error(
-      `Failed to retrieve leads: ${error.message}`
-    );
-  }
-
-  return (data ?? []) as Lead[];
-}
   /**
+   * Retrieves a paginated list of leads.
+   */
+  public async getLeads(
+    params: {
+      organizationId: string;
+      page?: number;
+      pageSize?: number;
+      search?: string;
+      status?: string;
+    }
+  ): Promise<Lead[]> {
+    const supabase = await createClient();
+
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 25;
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from('leads')
+      .select('*')
+      .eq('organization_id', params.organizationId);
+
+    if (params.status) {
+      query = query.eq('status', params.status);
+    }
+
+    if (params.search) {
+      query = query.ilike('name', `%${params.search}%`);
+    }
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(
+        `Failed to retrieve leads: ${error.message}`
+      );
+    }
+
+    return (data ?? []) as Lead[];
+  }
+
+  /**
+   * Updates a lead.
+   */
+  public async updateLead(
+    leadId: string,
+    payload: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      source?: string;
+      status?: string;
+      assignedTo?: string | null;
+    }
+  ): Promise<void> {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('Unauthenticated');
+    }
+
+    const { data: existingLead, error: getError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (getError) {
+      if (getError.code === 'PGRST116') {
+        throw new LeadNotFoundError(leadId);
+      }
+
+      throw new Error(
+        `Failed to retrieve lead: ${getError.message}`
+      );
+    }
+
+    if (payload.name !== undefined) {
+      this.validateName(payload.name);
+    }
+
+    if (
+      payload.email !== undefined &&
+      payload.email !== existingLead.email
+    ) {
+      await this.checkDuplicateEmail(
+        payload.email,
+        existingLead.organization_id,
+        supabase
+      );
+    }
+
+    const updates: Record<string, unknown> = {};
+
+    if (payload.name !== undefined) {
+      updates.name = payload.name.trim();
+    }
+
+    if (payload.email !== undefined) {
+      updates.email = payload.email;
+    }
+
+    if (payload.phone !== undefined) {
+      updates.phone = payload.phone;
+    }
+
+    if (payload.source !== undefined) {
+      updates.source = payload.source;
+    }
+
+    if (payload.status !== undefined) {
+      updates.status = payload.status;
+    }
+
+    if (payload.assignedTo !== undefined) {
+      updates.assigned_to = payload.assignedTo;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return;
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    const { data: updatedLead, error: updateError } = await supabase
+      .from('leads')
+      .update(updates)
+      .eq('id', leadId)
+      .eq('organization_id', existingLead.organization_id)
+      .select('*')
+      .single();
+
+    if (updateError || !updatedLead) {
+      throw new Error(
+        `Lead update failed: ${updateError?.message ?? 'Unknown error'}`
+      );
+    }
+
+    await createAuditLog({
+      organizationId: existingLead.organization_id,
+      actorId: user.id,
+      action: AuditAction.LEAD_UPDATED,
+      resourceType: ResourceType.LEAD,
+      resourceId: leadId,
+      before: existingLead,
+      after: updatedLead,
+    });
+  }
+    /**
    * Validates the lead name.
    */
   private validateName(name: string): void {
