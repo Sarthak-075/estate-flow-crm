@@ -1,72 +1,72 @@
 // src/lib/audit/auditService.ts
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Every auditable action in the system.
  */
 export enum AuditAction {
-  PROFILE_CREATED = "PROFILE_CREATED",
-  PROFILE_UPDATED = "PROFILE_UPDATED",
+  PROFILE_CREATED = 'PROFILE_CREATED',
+  PROFILE_UPDATED = 'PROFILE_UPDATED',
 
-  ORGANIZATION_CREATED = "ORGANIZATION_CREATED",
-  ORGANIZATION_UPDATED = "ORGANIZATION_UPDATED",
+  ORGANIZATION_CREATED = 'ORGANIZATION_CREATED',
+  ORGANIZATION_UPDATED = 'ORGANIZATION_UPDATED',
 
-  TEAM_MEMBER_CREATED = "TEAM_MEMBER_CREATED",
-  TEAM_MEMBER_UPDATED = "TEAM_MEMBER_UPDATED",
-  TEAM_MEMBER_REMOVED = "TEAM_MEMBER_REMOVED",
+  TEAM_MEMBER_CREATED = 'TEAM_MEMBER_CREATED',
+  TEAM_MEMBER_UPDATED = 'TEAM_MEMBER_UPDATED',
+  TEAM_MEMBER_REMOVED = 'TEAM_MEMBER_REMOVED',
 
-  ROLE_CREATED = "ROLE_CREATED",
-  ROLE_UPDATED = "ROLE_UPDATED",
-  ROLE_DELETED = "ROLE_DELETED",
+  ROLE_CREATED = 'ROLE_CREATED',
+  ROLE_UPDATED = 'ROLE_UPDATED',
+  ROLE_DELETED = 'ROLE_DELETED',
 
-  LEAD_CREATED = "LEAD_CREATED",
-  LEAD_UPDATED = "LEAD_UPDATED",
-  LEAD_DELETED = "LEAD_DELETED",
+  LEAD_CREATED = 'LEAD_CREATED',
+  LEAD_UPDATED = 'LEAD_UPDATED',
+  LEAD_DELETED = 'LEAD_DELETED',
 
-  CONTACT_CREATED = "CONTACT_CREATED",
-  CONTACT_UPDATED = "CONTACT_UPDATED",
-  CONTACT_DELETED = "CONTACT_DELETED",
+  CONTACT_CREATED = 'CONTACT_CREATED',
+  CONTACT_UPDATED = 'CONTACT_UPDATED',
+  CONTACT_DELETED = 'CONTACT_DELETED',
 
-  PIPELINE_CREATED = "PIPELINE_CREATED",
-  PIPELINE_UPDATED = "PIPELINE_UPDATED",
-  PIPELINE_DELETED = "PIPELINE_DELETED",
+  PIPELINE_CREATED = 'PIPELINE_CREATED',
+  PIPELINE_UPDATED = 'PIPELINE_UPDATED',
+  PIPELINE_DELETED = 'PIPELINE_DELETED',
 
-  PIPELINE_STAGE_CREATED = "PIPELINE_STAGE_CREATED",
-  PIPELINE_STAGE_UPDATED = "PIPELINE_STAGE_UPDATED",
-  PIPELINE_STAGE_DELETED = "PIPELINE_STAGE_DELETED",
+  PIPELINE_STAGE_CREATED = 'PIPELINE_STAGE_CREATED',
+  PIPELINE_STAGE_UPDATED = 'PIPELINE_STAGE_UPDATED',
+  PIPELINE_STAGE_DELETED = 'PIPELINE_STAGE_DELETED',
 
-  DEAL_CREATED = "DEAL_CREATED",
-  DEAL_UPDATED = "DEAL_UPDATED",
-  DEAL_DELETED = "DEAL_DELETED",
+  DEAL_CREATED = 'DEAL_CREATED',
+  DEAL_UPDATED = 'DEAL_UPDATED',
+  DEAL_DELETED = 'DEAL_DELETED',
 
-  DEAL_MOVED = "DEAL_MOVED",
-  DEAL_WON = "DEAL_WON",
-  DEAL_LOST = "DEAL_LOST",
+  DEAL_MOVED = 'DEAL_MOVED',
+  DEAL_WON = 'DEAL_WON',
+  DEAL_LOST = 'DEAL_LOST',
 
-  ACTIVITY_CREATED = "ACTIVITY_CREATED",
-  ACTIVITY_UPDATED = "ACTIVITY_UPDATED",
-  ACTIVITY_DELETED = "ACTIVITY_DELETED",
+  ACTIVITY_CREATED = 'ACTIVITY_CREATED',
+  ACTIVITY_UPDATED = 'ACTIVITY_UPDATED',
+  ACTIVITY_DELETED = 'ACTIVITY_DELETED',
 }
 
 /**
  * Resources that can be audited.
  */
 export enum ResourceType {
-  PROFILE = "profile",
-  ORGANIZATION = "organization",
+  PROFILE = 'profile',
+  ORGANIZATION = 'organization',
 
-  TEAM_MEMBER = "team_member",
-  ROLE = "role",
+  TEAM_MEMBER = 'team_member',
+  ROLE = 'role',
 
-  LEAD = "lead",
-  CONTACT = "contact",
+  LEAD = 'lead',
+  CONTACT = 'contact',
 
-  PIPELINE = "pipeline",
-  PIPELINE_STAGE = "pipeline_stage",
+  PIPELINE = 'pipeline',
+  PIPELINE_STAGE = 'pipeline_stage',
 
-  DEAL = "deal",
-  ACTIVITY = "activity",
+  DEAL = 'deal',
+  ACTIVITY = 'activity',
 }
 
 /**
@@ -96,7 +96,7 @@ export class AuditLogError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
 
-    this.name = "AuditLogError";
+    this.name = 'AuditLogError';
     this.cause = cause;
   }
 }
@@ -107,9 +107,7 @@ export class AuditLogError extends Error {
  * All application services should use this function instead of writing
  * directly to the audit_logs table.
  */
-export async function createAuditLog(
-  input: CreateAuditLogInput,
-): Promise<void> {
+export async function createAuditLog(input: CreateAuditLogInput): Promise<void> {
   const supabase = await createClient();
 
   const {
@@ -123,7 +121,7 @@ export async function createAuditLog(
     ipAddress = null,
   } = input;
 
-  const { error } = await supabase.from("audit_logs").insert({
+  const { error } = await supabase.from('audit_logs').insert({
     organization_id: organizationId,
     actor_id: actorId,
     action,
@@ -135,10 +133,7 @@ export async function createAuditLog(
   });
 
   if (error) {
-    throw new AuditLogError(
-      `Failed to create audit log: ${error.message}`,
-      error,
-    );
+    throw new AuditLogError(`Failed to create audit log: ${error.message}`, error);
   }
 }
 // ============================================================================
@@ -149,7 +144,7 @@ export async function logProfileCreated(
   organizationId: string,
   actorId: string,
   profileId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -166,7 +161,7 @@ export async function logProfileUpdated(
   actorId: string,
   profileId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -186,7 +181,7 @@ export async function logProfileUpdated(
 export async function logOrganizationCreated(
   organizationId: string,
   actorId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -202,7 +197,7 @@ export async function logOrganizationUpdated(
   organizationId: string,
   actorId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -223,7 +218,7 @@ export async function logLeadCreated(
   organizationId: string,
   actorId: string,
   leadId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -240,7 +235,7 @@ export async function logLeadUpdated(
   actorId: string,
   leadId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -257,7 +252,7 @@ export async function logLeadDeleted(
   organizationId: string,
   actorId: string,
   leadId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -277,7 +272,7 @@ export async function logContactCreated(
   organizationId: string,
   actorId: string,
   contactId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -294,7 +289,7 @@ export async function logContactUpdated(
   actorId: string,
   contactId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -311,7 +306,7 @@ export async function logContactDeleted(
   organizationId: string,
   actorId: string,
   contactId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -330,7 +325,7 @@ export async function logPipelineCreated(
   organizationId: string,
   actorId: string,
   pipelineId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -347,7 +342,7 @@ export async function logPipelineUpdated(
   actorId: string,
   pipelineId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -364,7 +359,7 @@ export async function logPipelineDeleted(
   organizationId: string,
   actorId: string,
   pipelineId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -384,7 +379,7 @@ export async function logPipelineStageCreated(
   organizationId: string,
   actorId: string,
   stageId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -401,7 +396,7 @@ export async function logPipelineStageUpdated(
   actorId: string,
   stageId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -418,7 +413,7 @@ export async function logPipelineStageDeleted(
   organizationId: string,
   actorId: string,
   stageId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -438,7 +433,7 @@ export async function logDealCreated(
   organizationId: string,
   actorId: string,
   dealId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -455,7 +450,7 @@ export async function logDealUpdated(
   actorId: string,
   dealId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -472,7 +467,7 @@ export async function logDealDeleted(
   organizationId: string,
   actorId: string,
   dealId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -489,7 +484,7 @@ export async function logDealMoved(
   actorId: string,
   dealId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -506,7 +501,7 @@ export async function logDealWon(
   organizationId: string,
   actorId: string,
   dealId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -522,7 +517,7 @@ export async function logDealLost(
   organizationId: string,
   actorId: string,
   dealId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -542,7 +537,7 @@ export async function logActivityCreated(
   organizationId: string,
   actorId: string,
   activityId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -559,7 +554,7 @@ export async function logActivityUpdated(
   actorId: string,
   activityId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -576,7 +571,7 @@ export async function logActivityDeleted(
   organizationId: string,
   actorId: string,
   activityId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -596,7 +591,7 @@ export async function logTeamMemberCreated(
   organizationId: string,
   actorId: string,
   memberId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -613,7 +608,7 @@ export async function logTeamMemberUpdated(
   actorId: string,
   memberId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -630,7 +625,7 @@ export async function logTeamMemberRemoved(
   organizationId: string,
   actorId: string,
   memberId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -650,7 +645,7 @@ export async function logRoleCreated(
   organizationId: string,
   actorId: string,
   roleId: string,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -667,7 +662,7 @@ export async function logRoleUpdated(
   actorId: string,
   roleId: string,
   before?: Record<string, unknown>,
-  after?: Record<string, unknown>,
+  after?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,
@@ -684,7 +679,7 @@ export async function logRoleDeleted(
   organizationId: string,
   actorId: string,
   roleId: string,
-  before?: Record<string, unknown>,
+  before?: Record<string, unknown>
 ): Promise<void> {
   await createAuditLog({
     organizationId,

@@ -2,8 +2,7 @@
  * TypeScript definitions for the Phase 1.1 Supabase database schema.
  * Only the tables required for the initial rollout are included.
  */
-export type Json =
-  string | number | boolean | null | { [key: string]: Json } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export interface Database {
   public: {
@@ -125,7 +124,7 @@ export interface Database {
           profile_id: string;
           role_id: string;
           invited_at: string | null;
-          status: "active" | "pending" | "removed";
+          status: 'active' | 'pending' | 'removed';
           created_at: string;
           updated_at: string | null;
         };
@@ -135,7 +134,7 @@ export interface Database {
           profile_id: string;
           role_id: string;
           invited_at?: string | null;
-          status?: "active" | "pending" | "removed";
+          status?: 'active' | 'pending' | 'removed';
           created_at?: string;
           updated_at?: string | null;
         };
@@ -145,7 +144,7 @@ export interface Database {
           profile_id?: string;
           role_id?: string;
           invited_at?: string | null;
-          status?: "active" | "pending" | "removed";
+          status?: 'active' | 'pending' | 'removed';
           created_at?: string;
           updated_at?: string | null;
         };
@@ -220,9 +219,9 @@ export interface Database {
 }
 
 // Helper types for generic usage
-export type Tables<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Row"];
-export type Inserts<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Insert"];
-export type Updates<T extends keyof Database["public"]["Tables"]> =
-  Database["public"]["Tables"][T]["Update"];
+export type Tables<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Row'];
+export type Inserts<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Insert'];
+export type Updates<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Update'];

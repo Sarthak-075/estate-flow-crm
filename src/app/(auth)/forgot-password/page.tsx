@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { forgotPasswordAction } from "@/features/auth/actions/forgotPasswordAction";
+import { useState } from 'react';
+import { forgotPasswordAction } from '@/features/auth/actions/forgotPasswordAction';
 
 export default function ForgotPasswordPage() {
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<string>('');
   const [sent, setSent] = useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
     if (result.success) {
       setSent(true);
     } else {
-      setError(result.error ?? "Request failed");
+      setError(result.error ?? 'Request failed');
     }
   };
 
@@ -28,17 +28,9 @@ export default function ForgotPasswordPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              required
-              className="w-full border rounded p-2"
-            />
+            <input type="email" name="email" required className="w-full border rounded p-2" />
           </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded"
-          >
+          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
             Send Reset Link
           </button>
         </form>

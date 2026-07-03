@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const resetPasswordSchema = z
   .object({
@@ -8,8 +8,8 @@ export const resetPasswordSchema = z
     refresh_token: z.string().nonempty(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
   });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

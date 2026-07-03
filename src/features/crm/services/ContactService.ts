@@ -1,28 +1,24 @@
-import { createClient } from "@/lib/supabase/server";
-import {
-  createAuditLog,
-  AuditAction,
-  ResourceType,
-} from "@/lib/audit/auditService";
+import { createClient } from '@/lib/supabase/server';
+import { createAuditLog, AuditAction, ResourceType } from '@/lib/audit/auditService';
 
 export class ContactValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "ContactValidationError";
+    this.name = 'ContactValidationError';
   }
 }
 
 export class DuplicateEmailError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "DuplicateEmailError";
+    this.name = 'DuplicateEmailError';
   }
 }
 
 export class ContactNotFoundError extends Error {
   constructor(contactId: string) {
     super(`Contact '${contactId}' was not found.`);
-    this.name = "ContactNotFoundError";
+    this.name = 'ContactNotFoundError';
   }
 }
 
@@ -56,7 +52,7 @@ export class ContactService {
       department?: string;
       leadId?: string | null;
       assignedTo?: string | null;
-    },
+    }
   ): Promise<string> {
     const supabase = await createClient();
 
@@ -66,7 +62,7 @@ export class ContactService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const actorId = user.id;
@@ -83,7 +79,7 @@ export class ContactService {
 
     // Insert contact
     const { data, error } = await supabase
-      .from("contacts")
+      .from('contacts')
       .insert({
         organization_id: organizationId,
         first_name: trimmedFirstName,
@@ -95,13 +91,11 @@ export class ContactService {
         lead_id: payload.leadId,
         assigned_to: payload.assignedTo,
       })
-      .select("id")
+      .select('id')
       .single();
 
     if (error || !data) {
-      throw new Error(
-        `Failed to create contact: ${error?.message ?? "Unknown error"}`,
-      );
+      throw new Error(`Failed to create contact: ${error?.message ?? 'Unknown error'}`);
     }
 
     // Audit log
@@ -132,13 +126,13 @@ export class ContactService {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", contactId)
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
       .single();
 
     if (error) {
-      if (error.code === "PGRST116") {
+      if (error.code === 'PGRST116') {
         throw new ContactNotFoundError(contactId);
       }
 
@@ -160,19 +154,14 @@ export class ContactService {
   }): Promise<Contact[]> {
     const supabase = await createClient();
 
-    let query = supabase
-      .from("contacts")
-      .select("*")
-      .eq("organization_id", params.organizationId);
+    let query = supabase.from('contacts').select('*').eq('organization_id', params.organizationId);
 
     if (params.leadId) {
-      query = query.eq("lead_id", params.leadId);
+      query = query.eq('lead_id', params.leadId);
     }
 
     if (params.search) {
-      query = query.or(
-        `first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%`,
-      );
+      query = query.or(`first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%`);
     }
 
     const page = Math.max(params.page ?? 1, 1);
@@ -180,9 +169,7 @@ export class ContactService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
+    const { data, error } = await query.order('created_at', { ascending: false }).range(from, to);
 
     if (error) {
       throw new Error(`Failed to retrieve contacts: ${error.message}`);
@@ -205,7 +192,7 @@ export class ContactService {
       department?: string;
       leadId?: string | null;
       assignedTo?: string | null;
-    },
+    }
   ): Promise<void> {
     const supabase = await createClient();
 
@@ -215,17 +202,17 @@ export class ContactService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const { data: existingContact, error: getError } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", contactId)
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
       .single();
 
     if (getError) {
-      if (getError.code === "PGRST116") {
+      if (getError.code === 'PGRST116') {
         throw new ContactNotFoundError(contactId);
       }
 
@@ -252,11 +239,7 @@ export class ContactService {
       const email = payload.email.trim();
 
       if (email !== existingContact.email) {
-        await this.checkDuplicateEmail(
-          email,
-          existingContact.organization_id,
-          supabase,
-        );
+        await this.checkDuplicateEmail(email, existingContact.organization_id, supabase);
       }
 
       updates.email = email;
@@ -289,17 +272,15 @@ export class ContactService {
     updates.updated_at = new Date().toISOString();
 
     const { data: updatedContact, error: updateError } = await supabase
-      .from("contacts")
+      .from('contacts')
       .update(updates)
-      .eq("id", contactId)
-      .eq("organization_id", existingContact.organization_id)
-      .select("*")
+      .eq('id', contactId)
+      .eq('organization_id', existingContact.organization_id)
+      .select('*')
       .single();
 
     if (updateError || !updatedContact) {
-      throw new Error(
-        `Contact update failed: ${updateError?.message ?? "Unknown error"}`,
-      );
+      throw new Error(`Contact update failed: ${updateError?.message ?? 'Unknown error'}`);
     }
 
     await createAuditLog({
@@ -325,17 +306,17 @@ export class ContactService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const { data: existingContact, error: getError } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", contactId)
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
       .single();
 
     if (getError) {
-      if (getError.code === "PGRST116") {
+      if (getError.code === 'PGRST116') {
         throw new ContactNotFoundError(contactId);
       }
 
@@ -343,10 +324,10 @@ export class ContactService {
     }
 
     const { error: deleteError } = await supabase
-      .from("contacts")
+      .from('contacts')
       .delete()
-      .eq("id", contactId)
-      .eq("organization_id", existingContact.organization_id);
+      .eq('id', contactId)
+      .eq('organization_id', existingContact.organization_id);
 
     if (deleteError) {
       throw new Error(`Failed to delete contact: ${deleteError.message}`);
@@ -370,11 +351,11 @@ export class ContactService {
     const trimmedLast = lastName.trim();
 
     if (trimmedFirst.length === 0) {
-      throw new ContactValidationError("First name cannot be empty.");
+      throw new ContactValidationError('First name cannot be empty.');
     }
 
     if (trimmedLast.length === 0) {
-      throw new ContactValidationError("Last name cannot be empty.");
+      throw new ContactValidationError('Last name cannot be empty.');
     }
   }
 
@@ -384,17 +365,17 @@ export class ContactService {
   private async checkDuplicateEmail(
     email: string | undefined,
     organizationId: string,
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Awaited<ReturnType<typeof createClient>>
   ): Promise<void> {
     if (!email) {
       return;
     }
 
     const { data, error } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("email", email)
+      .from('contacts')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('email', email)
       .maybeSingle();
 
     if (error) {
@@ -402,9 +383,7 @@ export class ContactService {
     }
 
     if (data) {
-      throw new DuplicateEmailError(
-        "A contact with this email already exists.",
-      );
+      throw new DuplicateEmailError('A contact with this email already exists.');
     }
   }
 }

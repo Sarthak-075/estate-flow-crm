@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /**
  * Seed default roles for every existing organization.
@@ -8,26 +8,24 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
  */
 async function seedRoles() {
   // Fetch all organizations – we will seed roles for each one.
-  const { data: orgs, error: orgErr } = await supabaseAdmin
-    .from("organizations")
-    .select("id");
+  const { data: orgs, error: orgErr } = await supabaseAdmin.from('organizations').select('id');
   if (orgErr) throw orgErr;
 
   if (!orgs || orgs.length === 0) {
-    console.warn("⚠️ No organizations found – skipping role seeding.");
+    console.warn('⚠️ No organizations found – skipping role seeding.');
     return;
   }
 
-  const roles = ["owner", "admin", "manager", "agent"];
+  const roles = ['owner', 'admin', 'manager', 'agent'];
 
   // Upsert roles for every organization.
   for (const org of orgs) {
-    const { error } = await supabaseAdmin.from("roles").upsert(
+    const { error } = await supabaseAdmin.from('roles').upsert(
       roles.map((name) => ({ organization_id: org.id, name })),
-      { onConflict: "organization_id,name" },
+      { onConflict: 'organization_id,name' }
     );
     if (error) throw error;
-    console.log("Seeded roles for organization", org.id);
+    console.log('Seeded roles for organization', org.id);
   }
 }
 

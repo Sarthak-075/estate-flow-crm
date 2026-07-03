@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
-import type { AuthenticatedUser } from "@/features/auth/types";
-import type { User } from "@supabase/supabase-js";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import type { AuthenticatedUser } from '@/features/auth/types';
+import type { User } from '@supabase/supabase-js';
 
 /**
  * Read‑only hook that returns the currently authenticated user, if any.
@@ -36,6 +36,6 @@ export function useAuth() {
   /** Convert Supabase `User | null` → our `AuthenticatedUser | null` */
   function mapUser(u: User | null): AuthenticatedUser | null {
     if (!u) return null;
-    return { id: u.id, email: u.email ?? "" };
+    return { id: u.id, email: u.email ?? '' };
   }
 }

@@ -29,19 +29,19 @@
 
 ```ts
 type LeadStatus =
-  | "New"
-  | "Contacted"
-  | "Interested"
-  | "Site Visit Scheduled"
-  | "Site Visit Completed"
-  | "Negotiation"
-  | "Booking Done"
-  | "Won"
-  | "Lost"
-  | "Not Responding";
+  | 'New'
+  | 'Contacted'
+  | 'Interested'
+  | 'Site Visit Scheduled'
+  | 'Site Visit Completed'
+  | 'Negotiation'
+  | 'Booking Done'
+  | 'Won'
+  | 'Lost'
+  | 'Not Responding';
 
-type LeadTemperature = "Cold" | "Warm" | "Hot";
-type DuplicateStatus = "pending" | "merged" | "ignored";
+type LeadTemperature = 'Cold' | 'Warm' | 'Hot';
+type DuplicateStatus = 'pending' | 'merged' | 'ignored';
 
 interface Lead {
   id: string;
@@ -151,7 +151,7 @@ Notes:
 interface Property {
   id: string;
   organization_id: string;
-  type: "project" | "building" | "unit";
+  type: 'project' | 'building' | 'unit';
   reference_id: string; // FK to projects/buildings/units
   title: string;
   description?: string;
@@ -281,7 +281,7 @@ Operational visibility into async processing.
 ### Operations DTOs
 
 ```ts
-type OutboxStatus = "pending" | "processing" | "failed" | "completed";
+type OutboxStatus = 'pending' | 'processing' | 'failed' | 'completed';
 
 interface OutboxEvent {
   id: string;
@@ -294,7 +294,7 @@ interface OutboxEvent {
   processed_at?: string;
 }
 
-type JobStatus = "pending" | "processing" | "failed" | "completed";
+type JobStatus = 'pending' | 'processing' | 'failed' | 'completed';
 
 interface Job {
   id: string;

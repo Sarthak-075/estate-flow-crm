@@ -1,8 +1,8 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
-import { env } from "@/lib/env";
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+import { env } from '@/lib/env';
 
-import { bootstrapAuthenticatedUser } from "@/features/auth/services/profileBootstrapService";
+import { bootstrapAuthenticatedUser } from '@/features/auth/services/profileBootstrapService';
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({
@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
-    },
+    }
   );
 
   await supabase.auth.getSession();
@@ -40,5 +40,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

@@ -4,14 +4,14 @@
  * `node -r ts-node/register src/db/seed.ts`.
  */
 async function main() {
-  console.log("🔧 Starting database seed...");
+  console.log('🔧 Starting database seed...');
   try {
-    await import("./seedRoles");
-    await import("./seedPermissions");
-    await import("./seedSettings");
-    console.log("✅ Seed completed successfully");
+    await import('./seedRoles');
+    await import('./seedPermissions');
+    await import('./seedSettings');
+    console.log('✅ Seed completed successfully');
   } catch (err) {
-    console.error("❌ Seed failed:", err);
+    console.error('❌ Seed failed:', err);
     process.exit(1);
   }
 }

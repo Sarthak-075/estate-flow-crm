@@ -1,29 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 import {
   logLeadCreated,
   createAuditLog,
   AuditAction,
   ResourceType,
-} from "@/lib/audit/auditService";
+} from '@/lib/audit/auditService';
 
 export class LeadValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "LeadValidationError";
+    this.name = 'LeadValidationError';
   }
 }
 
 export class DuplicateEmailError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "DuplicateEmailError";
+    this.name = 'DuplicateEmailError';
   }
 }
 
 export class LeadNotFoundError extends Error {
   constructor(leadId: string) {
     super(`Lead '${leadId}' was not found.`);
-    this.name = "LeadNotFoundError";
+    this.name = 'LeadNotFoundError';
   }
 }
 
@@ -53,7 +53,7 @@ export class LeadService {
       source?: string;
       status?: string;
       assignedTo?: string | null;
-    },
+    }
   ): Promise<string> {
     const supabase = await createClient();
 
@@ -63,7 +63,7 @@ export class LeadService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const actorId = user.id;
@@ -77,23 +77,21 @@ export class LeadService {
     await this.checkDuplicateEmail(email, organizationId, supabase);
 
     const { data, error } = await supabase
-      .from("leads")
+      .from('leads')
       .insert({
         organization_id: organizationId,
         name: trimmedName,
         email: email,
         phone: payload.phone,
         source: payload.source,
-        status: payload.status ?? "new",
+        status: payload.status ?? 'new',
         assigned_to: payload.assignedTo,
       })
-      .select("id")
+      .select('id')
       .single();
 
     if (error || !data) {
-      throw new Error(
-        `Failed to create lead: ${error?.message ?? "Unknown error"}`,
-      );
+      throw new Error(`Failed to create lead: ${error?.message ?? 'Unknown error'}`);
     }
 
     await logLeadCreated(organizationId, actorId, data.id, {
@@ -101,7 +99,7 @@ export class LeadService {
       email: email,
       phone: payload.phone,
       source: payload.source,
-      status: payload.status ?? "new",
+      status: payload.status ?? 'new',
       assignedTo: payload.assignedTo,
     });
 
@@ -113,14 +111,10 @@ export class LeadService {
   public async getLead(leadId: string): Promise<Lead> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("id", leadId)
-      .single();
+    const { data, error } = await supabase.from('leads').select('*').eq('id', leadId).single();
 
     if (error) {
-      if (error.code === "PGRST116") {
+      if (error.code === 'PGRST116') {
         throw new LeadNotFoundError(leadId);
       }
 
@@ -148,22 +142,17 @@ export class LeadService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabase
-      .from("leads")
-      .select("*")
-      .eq("organization_id", params.organizationId);
+    let query = supabase.from('leads').select('*').eq('organization_id', params.organizationId);
 
     if (params.status) {
-      query = query.eq("status", params.status);
+      query = query.eq('status', params.status);
     }
 
     if (params.search) {
-      query = query.ilike("name", `%${params.search}%`);
+      query = query.ilike('name', `%${params.search}%`);
     }
 
-    const { data, error } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
+    const { data, error } = await query.order('created_at', { ascending: false }).range(from, to);
 
     if (error) {
       throw new Error(`Failed to retrieve leads: ${error.message}`);
@@ -184,7 +173,7 @@ export class LeadService {
       source?: string;
       status?: string;
       assignedTo?: string | null;
-    },
+    }
   ): Promise<void> {
     const supabase = await createClient();
 
@@ -194,17 +183,17 @@ export class LeadService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const { data: existingLead, error: getError } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("id", leadId)
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
       .single();
 
     if (getError) {
-      if (getError.code === "PGRST116") {
+      if (getError.code === 'PGRST116') {
         throw new LeadNotFoundError(leadId);
       }
 
@@ -218,11 +207,7 @@ export class LeadService {
     const email = payload.email?.trim() ?? payload.email;
 
     if (email !== undefined && email !== existingLead.email) {
-      await this.checkDuplicateEmail(
-        email,
-        existingLead.organization_id,
-        supabase,
-      );
+      await this.checkDuplicateEmail(email, existingLead.organization_id, supabase);
     }
 
     const updates: Record<string, unknown> = {};
@@ -258,17 +243,15 @@ export class LeadService {
     updates.updated_at = new Date().toISOString();
 
     const { data: updatedLead, error: updateError } = await supabase
-      .from("leads")
+      .from('leads')
       .update(updates)
-      .eq("id", leadId)
-      .eq("organization_id", existingLead.organization_id)
-      .select("*")
+      .eq('id', leadId)
+      .eq('organization_id', existingLead.organization_id)
+      .select('*')
       .single();
 
     if (updateError || !updatedLead) {
-      throw new Error(
-        `Lead update failed: ${updateError?.message ?? "Unknown error"}`,
-      );
+      throw new Error(`Lead update failed: ${updateError?.message ?? 'Unknown error'}`);
     }
 
     await createAuditLog({
@@ -294,17 +277,17 @@ export class LeadService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error("Unauthenticated");
+      throw new Error('Unauthenticated');
     }
 
     const { data: existingLead, error: getError } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("id", leadId)
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
       .single();
 
     if (getError) {
-      if (getError.code === "PGRST116") {
+      if (getError.code === 'PGRST116') {
         throw new LeadNotFoundError(leadId);
       }
 
@@ -312,10 +295,10 @@ export class LeadService {
     }
 
     const { error: deleteError } = await supabase
-      .from("leads")
+      .from('leads')
       .delete()
-      .eq("id", leadId)
-      .eq("organization_id", existingLead.organization_id);
+      .eq('id', leadId)
+      .eq('organization_id', existingLead.organization_id);
 
     if (deleteError) {
       throw new Error(`Failed to delete lead: ${deleteError.message}`);
@@ -338,7 +321,7 @@ export class LeadService {
     const trimmed = name.trim();
 
     if (trimmed.length === 0) {
-      throw new LeadValidationError("Lead name cannot be empty.");
+      throw new LeadValidationError('Lead name cannot be empty.');
     }
   }
 
@@ -348,17 +331,17 @@ export class LeadService {
   private async checkDuplicateEmail(
     email: string | undefined,
     organizationId: string,
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: Awaited<ReturnType<typeof createClient>>
   ): Promise<void> {
     if (!email) {
       return;
     }
 
     const { data, error } = await supabase
-      .from("leads")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("email", email)
+      .from('leads')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('email', email)
       .maybeSingle();
 
     if (error) {
@@ -366,7 +349,7 @@ export class LeadService {
     }
 
     if (data) {
-      throw new DuplicateEmailError("A lead with this email already exists.");
+      throw new DuplicateEmailError('A lead with this email already exists.');
     }
   }
 }
