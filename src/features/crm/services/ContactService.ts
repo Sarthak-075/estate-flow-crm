@@ -129,6 +129,32 @@ export class ContactService {
 
     return data.id;
   }
+    /**
+   * Retrieves a single contact by ID.
+   */
+  public async getContact(
+    contactId: string
+  ): Promise<Contact> {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('id', contactId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new ContactNotFoundError(contactId);
+      }
+
+      throw new Error(
+        `Failed to retrieve contact: ${error.message}`
+      );
+    }
+
+    return data as Contact;
+  }
 
   /**
    * Validates first and last names.
