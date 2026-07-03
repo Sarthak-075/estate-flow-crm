@@ -103,11 +103,12 @@
 ```
 
 ### Rationale
+
 - **Feature-Based Slices (`/features`):** Each feature folder contains the UI components, hooks, and server actions related to one domain (e.g., "leads"). This keeps related code together and makes it easy to navigate. Underscores (`_`) denote private folders not accessible via URL.
 - **Clear Layers (`/services`, `/repositories`):** The backend logic is strictly separated.
-    - **Services:** Contain business rules. They know *what* to do.
-    - **Repositories:** Handle database operations. They know *how* to fetch and store data.
-    - This separation makes the code more testable, maintainable, and scalable.
+  - **Services:** Contain business rules. They know _what_ to do.
+  - **Repositories:** Handle database operations. They know _how_ to fetch and store data.
+  - This separation makes the code more testable, maintainable, and scalable.
 - **API Versioning (`/app/api/v1`):** All API endpoints are explicitly versioned to ensure backward compatibility as the application evolves.
 - **Background Work (`/workers`):** Isolate the logic for background processing, making it clear what runs outside the user request-response cycle.
 - **Adapters (`/adapters`):** Each third-party integration is isolated behind an adapter boundary. Services never call vendor SDKs directly.

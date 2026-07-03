@@ -27,13 +27,26 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block mb-1">Email</label>
-          <input type="email" name="email" required className="w-full border rounded p-2" />
+          <input
+            type="email"
+            name="email"
+            required
+            className="w-full border rounded p-2"
+          />
         </div>
         <div>
           <label className="block mb-1">Password</label>
-          <input type="password" name="password" required className="w-full border rounded p-2" />
+          <input
+            type="password"
+            name="password"
+            required
+            className="w-full border rounded p-2"
+          />
         </div>
-        <button type="submit" className="w-full bg-green-600 text-white py-2 rounded">
+        <button
+          type="submit"
+          className="w-full bg-green-600 text-white py-2 rounded"
+        >
           Sign Up
         </button>
       </form>

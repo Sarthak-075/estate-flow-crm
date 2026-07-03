@@ -3,6 +3,7 @@
 > This document describes the high-level and component-level architecture for the **Estate Flow CRM** SaaS platform. The architecture is designed for a production-grade, multi-tenant environment, prioritizing security, scalability, and maintainability.
 
 ## 1. System Architecture Diagram
+
 ```mermaid
 flowchart TB
     subgraph Client[Client]
@@ -49,6 +50,7 @@ flowchart TB
 ```
 
 ### Key Principles
+
 - **Multi-Tenant First:** All data is partitioned by `organization_id`, enforced by Supabase Row-Level Security (RLS).
 - **Simplified Stack:** The architecture relies only on Vercel and Supabase, minimizing external dependencies.
 - **Server-Centric:** Business logic resides in a Service Layer on the backend, not in the client.
@@ -56,7 +58,9 @@ flowchart TB
 - **Versioned APIs:** All API endpoints are versioned (e.g., `/api/v1/*`) for stable evolution.
 
 ---
+
 ## 2. Backend Architecture
+
 ```mermaid
 classDiagram
     direction TB
@@ -89,13 +93,17 @@ classDiagram
     Repository --> DB : queries
     Service --> DB : (writes to event_outbox)
 ```
+
 - **Route Handlers:** Thin layers responsible for HTTP request/response, input validation (using Zod), and authentication checks.
 - **Service Layer:** Contains all business logic. It orchestrates operations across multiple repositories and ensures transactional integrity. It is the only layer that writes to the `event_outbox`.
 - **Repository Layer:** Abstracts all database interactions. Each repository is responsible for a single table or a closely related group of tables. It never contains business logic.
 
 ---
+
 ## 3. Event-Driven & Background Job Architecture
+
 The system avoids fragile, in-memory event buses and external dependencies like Redis.
+
 ```mermaid
 sequenceDiagram
     participant Service
@@ -121,12 +129,16 @@ sequenceDiagram
     JobWorker->>ExternalAPI: Send email/SMS
     JobWorker->>DB: UPDATE jobs SET status='completed'
 ```
+
 - **Event Outbox Pattern:** Guarantees that an event is created if and only if the business transaction succeeds. This provides "at-least-once" delivery semantics for side effects.
 - **PostgreSQL as a Queue:** The `jobs` table acts as a reliable, transactional job queue. Workers use `SELECT ... FOR UPDATE SKIP LOCKED` to safely pull jobs without contention. This eliminates the need for BullMQ/Redis.
 
 ---
+
 ## 4. Multi-Tenant Architecture
+
 Tenant isolation is the cornerstone of the architecture, enforced at multiple levels.
+
 ```mermaid
 graph TD
     A[User Request] --> B{Vercel Edge Middleware};
@@ -137,21 +149,26 @@ graph TD
     F -->|RLS Policy| G[organization_id = jwt.org_id];
     G --> H[Filtered Data];
 ```
+
 - **Authentication:** Supabase Auth issues JWTs that are enriched with the user's `organization_id` and `role`.
 - **RLS Policies:** Every database query is automatically filtered by the `organization_id` in the JWT. It is impossible for a query to access another tenant's data.
 - **Scoped Resources:** All tenant-specific configurations, like feature flags (`feature_flags` table) and integration settings (`integration_settings` table), are stored in tables with an `organization_id` and protected by RLS.
 
 ---
+
 ## Organization Configuration Layer
+
 Purpose: Store tenant operational settings.
 
 Examples:
+
 - Timezone
 - Business Hours
 - Branding
 - SLA Rules
 
 Relationship:
+
 ```
 Organization
     → Organization Settings
@@ -160,23 +177,31 @@ Organization
 Implementation note: Settings are stored in the `organization_settings` table and retrieved/updated via `/api/v1/settings` (Owner/Admin).
 
 ---
+
 ## 5. Billing & Feature Flag Architecture
+
 - **Billing:** A set of `plans`, `subscriptions`, and `usage_metrics` tables provides the foundation for a future-proof billing system. Usage metrics (e.g., number of users, leads created) are tracked per tenant. This structure is designed to integrate with payment providers like Stripe or Razorpay.
 - **Feature Flags:** The `feature_flags` table allows features to be toggled on or off for specific tenants. This enables controlled rollouts, beta programs, and tiered pricing plans. An admin API (`/api/v1/feature-flags`) allows for runtime management of these flags.
 
 ---
+
 ## 6. Deployment & Operations
+
 The entire platform is designed to be deployed and operated with only two main providers:
+
 - **Vercel:** For hosting the Next.js frontend, API routes, and serverless functions.
 - **Supabase:** For the PostgreSQL database, authentication, file storage, and realtime capabilities.
 
 This lean stack reduces operational complexity and cost, making it ideal for a scalable SaaS product.
 
 ---
+
 ## 7. Real Estate Domain Architecture
+
 The CRM is optimized for the core real-estate workflow: capturing interest, managing engagement, scheduling site visits, progressing negotiation, and closing.
 
 ### Lead Lifecycle
+
 ```mermaid
 stateDiagram-v2
     [*] --> New
@@ -203,15 +228,19 @@ stateDiagram-v2
 ```
 
 **Domain notes**:
+
 - Site visit completion/no-show is tracked on `site_visits` and can advance (or stall) the lead lifecycle.
 - SLA measurement is derived from lead creation and first meaningful engagement and stored in `lead_sla_metrics`.
 - Duplicate detection/merge is part of the lead domain and gates certain actions while under review.
 
 ---
+
 ## 8. Inventory Architecture
+
 Real-estate inventory is hierarchical and must be modeled explicitly for reporting, availability tracking, and lead interest mapping.
 
 ### Inventory Hierarchy
+
 ```mermaid
 flowchart TD
     Project[Project]
@@ -225,6 +254,7 @@ flowchart TD
 ```
 
 **Relationship model**:
+
 - `projects` is the top-level entity (developer, location, status).
 - `buildings` belongs to `projects`.
 - `units` belongs to `buildings` and represents sellable/rentable inventory with `availability`.

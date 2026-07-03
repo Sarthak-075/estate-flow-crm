@@ -1,9 +1,9 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import {
   AuditAction,
   ResourceType,
   createAuditLog,
-} from '@/lib/audit/auditService';
+} from "@/lib/audit/auditService";
 
 /**
  * Thrown when a pipeline with the same name already exists.
@@ -11,7 +11,7 @@ import {
 export class PipelineAlreadyExistsError extends Error {
   constructor(name: string) {
     super(`Pipeline "${name}" already exists.`);
-    this.name = 'PipelineAlreadyExistsError';
+    this.name = "PipelineAlreadyExistsError";
   }
 }
 
@@ -21,7 +21,7 @@ export class PipelineAlreadyExistsError extends Error {
 export class PipelineValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PipelineValidationError';
+    this.name = "PipelineValidationError";
   }
 }
 
@@ -30,8 +30,8 @@ export class PipelineValidationError extends Error {
  */
 export class UnauthenticatedError extends Error {
   constructor() {
-    super('User is not authenticated.');
-    this.name = 'UnauthenticatedError';
+    super("User is not authenticated.");
+    this.name = "UnauthenticatedError";
   }
 }
 
@@ -53,7 +53,7 @@ export class PipelineService {
     payload: {
       name: string;
       description?: string;
-    }
+    },
   ): Promise<string> {
     const supabase = await createClient();
 
@@ -78,15 +78,15 @@ export class PipelineService {
 
     if (name.length < 3) {
       throw new PipelineValidationError(
-        'Pipeline name must contain at least 3 characters.'
+        "Pipeline name must contain at least 3 characters.",
       );
     }
 
     const { data: existingPipeline, error: duplicateError } = await supabase
-      .from('pipelines')
-      .select('id')
-      .eq('organization_id', orgId)
-      .eq('name', name)
+      .from("pipelines")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("name", name)
       .maybeSingle();
 
     if (duplicateError) {
@@ -102,13 +102,13 @@ export class PipelineService {
     // -------------------------------------------------------------------------
 
     const { data: pipeline, error: insertError } = await supabase
-      .from('pipelines')
+      .from("pipelines")
       .insert({
         organization_id: orgId,
         name,
         description: payload.description ?? null,
       })
-      .select('id, organization_id, name')
+      .select("id, organization_id, name")
       .single();
 
     if (insertError || !pipeline) {

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
-import { createClient } from '@/lib/supabase/server';
+export const dynamic = "force-dynamic";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Supabase auth callback handler.
@@ -12,8 +12,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  const accessToken = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
 
   const supabase = await createClient();
 
@@ -25,5 +25,5 @@ export async function GET(request: Request) {
   }
 
   // Redirect to the dashboard after establishing the session.
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  return NextResponse.redirect(new URL("/dashboard", request.url));
 }

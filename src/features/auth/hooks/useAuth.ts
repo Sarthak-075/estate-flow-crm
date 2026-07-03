@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import type { AuthenticatedUser } from '@/features/auth/types';
-import type { User } from '@supabase/supabase-js';
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import type { AuthenticatedUser } from "@/features/auth/types";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Read‑only hook that returns the currently authenticated user, if any.
@@ -20,7 +20,9 @@ export function useAuth() {
     });
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(mapUser(session?.user ?? null));
     });
 
@@ -31,9 +33,9 @@ export function useAuth() {
 
   return { user, loading };
 
-/** Convert Supabase `User | null` → our `AuthenticatedUser | null` */
-function mapUser(u: User | null): AuthenticatedUser | null {
-  if (!u) return null;
-  return { id: u.id, email: u.email ?? '' };
-}
+  /** Convert Supabase `User | null` → our `AuthenticatedUser | null` */
+  function mapUser(u: User | null): AuthenticatedUser | null {
+    if (!u) return null;
+    return { id: u.id, email: u.email ?? "" };
+  }
 }
