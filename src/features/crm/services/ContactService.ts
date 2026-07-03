@@ -333,6 +333,67 @@ public async updateContact(
   });
 }
 
+/**
+ * Deletes an existing contact.
+ */
+public async deleteContact(
+  contactId: string
+): Promise<void> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('Unauthenticated');
+  }
+
+  const {
+    data: existingContact,
+    error: getError,
+  } = await supabase
+    .from('contacts')
+    .select('*')
+    .eq('id', contactId)
+    .single();
+
+  if (getError) {
+    if (getError.code === 'PGRST116') {
+      throw new ContactNotFoundError(contactId);
+    }
+
+    throw new Error(
+      `Failed to retrieve contact: ${getError.message}`
+    );
+  }
+
+  const { error: deleteError } = await supabase
+    .from('contacts')
+    .delete()
+    .eq('id', contactId)
+    .eq(
+      'organization_id',
+      existingContact.organization_id
+    );
+
+  if (deleteError) {
+    throw new Error(
+      `Failed to delete contact: ${deleteError.message}`
+    );
+  }
+
+  await createAuditLog({
+    organizationId: existingContact.organization_id,
+    actorId: user.id,
+    action: AuditAction.CONTACT_DELETED,
+    resourceType: ResourceType.CONTACT,
+    resourceId: contactId,
+    before: existingContact,
+  });
+}
+
   /**
    * Validates first and last names.
    */
