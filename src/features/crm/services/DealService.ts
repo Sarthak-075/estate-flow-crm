@@ -1,21 +1,21 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 import {
   createAuditLog,
   AuditAction,
   ResourceType,
-} from '@/lib/audit/auditService';
+} from "@/lib/audit/auditService";
 
 export class DealValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DealValidationError';
+    this.name = "DealValidationError";
   }
 }
 
 export class DealNotFoundError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DealNotFoundError';
+    this.name = "DealNotFoundError";
   }
 }
 
@@ -57,9 +57,9 @@ export class DealService {
    * @returns               The newly created deal ID.
    */
   public async createDeal(
-  organizationId: string,
-  payload: CreateDealPayload
-): Promise<string> {
+    organizationId: string,
+    payload: CreateDealPayload,
+  ): Promise<string> {
     const supabase = await createClient();
 
     // ---------- Authentication ----------
@@ -69,17 +69,13 @@ export class DealService {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      throw new Error('Unauthenticated');
+      throw new Error("Unauthenticated");
     }
     const actorId = user.id;
 
-    await this.validateDeal(
-  payload,
-  supabase,
-  organizationId
-);
+    await this.validateDeal(payload, supabase, organizationId);
 
-const trimmedName = payload.name.trim();
+    const trimmedName = payload.name.trim();
 
     // ---------- Build insert payload ----------
     const insertPayload = {
@@ -96,9 +92,9 @@ const trimmedName = payload.name.trim();
 
     // ---------- Insert deal ----------
     const { data: insertedDeal, error: insertError } = await supabase
-      .from('deals')
+      .from("deals")
       .insert(insertPayload)
-      .select('id')
+      .select("id")
       .single();
 
     if (insertError) {
@@ -123,80 +119,134 @@ const trimmedName = payload.name.trim();
     return dealId;
   }
 
+  public async getDeal(dealId: string): Promise<Deal> {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("deals")
+      .select("*")
+      .eq("id", dealId)
+      .single();
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new DealNotFoundError(`Deal '${dealId}' was not found.`);
+      }
+      throw new Error(`Failed to retrieve deal: ${error.message}`);
+    }
+    return data as Deal;
+  }
+
+  public async getDeals(params: {
+    organizationId: string;
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    pipelineId?: string;
+    stageId?: string;
+  }): Promise<Deal[]> {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("deals")
+      .select("*")
+      .eq("organization_id", params.organizationId);
+
+    if (params.pipelineId) {
+      query = query.eq("pipeline_id", params.pipelineId);
+    }
+
+    if (params.stageId) {
+      query = query.eq("stage_id", params.stageId);
+    }
+
+    if (params.search) {
+      query = query.ilike("name", `%${params.search}%`);
+    }
+
+    const page = Math.max(params.page ?? 1, 1);
+    const pageSize = Math.max(params.pageSize ?? 25, 1);
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to retrieve deals: ${error.message}`);
+    }
+
+    return (data ?? []) as Deal[];
+  }
+
   // -----------------------------------------------------------------
   // Private helpers (mirroring ContactService pattern)
   // -----------------------------------------------------------------
   private async validateDeal(
-  payload: CreateDealPayload,
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string
-): Promise<void> {
+    payload: CreateDealPayload,
+    supabase: Awaited<ReturnType<typeof createClient>>,
+    organizationId: string,
+  ): Promise<void> {
     // Additional validation could be added here if needed.
     // Example: verify lead/contact belong to the organization.
     if (!payload.name.trim()) {
-  throw new DealValidationError(
-    'Deal name cannot be empty.'
-  );
-}
+      throw new DealValidationError("Deal name cannot be empty.");
+    }
 
-if (
-  payload.value !== undefined &&
-  payload.value < 0
-) {
-  throw new DealValidationError(
-    'Deal value cannot be negative.'
-  );
-}
+    if (payload.value !== undefined && payload.value < 0) {
+      throw new DealValidationError("Deal value cannot be negative.");
+    }
 
-const { error: pipelineError } = await supabase
-  .from('pipelines')
-  .select('id')
-  .eq('id', payload.pipelineId)
-  .eq('organization_id', organizationId)
-  .single();
+    const { error: pipelineError } = await supabase
+      .from("pipelines")
+      .select("id")
+      .eq("id", payload.pipelineId)
+      .eq("organization_id", organizationId)
+      .single();
 
-if (pipelineError) {
-  throw new DealValidationError(
-    `Pipeline not found: ${payload.pipelineId}`
-  );
-}
+    if (pipelineError) {
+      throw new DealValidationError(
+        `Pipeline not found: ${payload.pipelineId}`,
+      );
+    }
 
-const { error: stageError } = await supabase
-  .from('pipeline_stages')
-  .select('id')
-  .eq('id', payload.stageId)
-  .eq('pipeline_id', payload.pipelineId)
-  .single();
+    const { error: stageError } = await supabase
+      .from("pipeline_stages")
+      .select("id")
+      .eq("id", payload.stageId)
+      .eq("pipeline_id", payload.pipelineId)
+      .single();
 
-if (stageError) {
-  throw new DealValidationError(
-    `Stage not found: ${payload.stageId}`
-  );
-}
+    if (stageError) {
+      throw new DealValidationError(`Stage not found: ${payload.stageId}`);
+    }
 
     if (payload.leadId) {
       const { error } = await supabase
-        .from('leads')
-        .select('id')
-        .eq('id', payload.leadId)
-        .eq('organization_id', organizationId)
+        .from("leads")
+        .select("id")
+        .eq("id", payload.leadId)
+        .eq("organization_id", organizationId)
         .single();
 
       if (error) {
-        throw new DealValidationError(`Lead not found or not in organization: ${payload.leadId}`);
+        throw new DealValidationError(
+          `Lead not found or not in organization: ${payload.leadId}`,
+        );
       }
     }
 
     if (payload.contactId) {
       const { error } = await supabase
-        .from('contacts')
-        .select('id')
-        .eq('id', payload.contactId)
-        .eq('organization_id', organizationId)
+        .from("contacts")
+        .select("id")
+        .eq("id", payload.contactId)
+        .eq("organization_id", organizationId)
         .single();
 
       if (error) {
-        throw new DealValidationError(`Contact not found or not in organization: ${payload.contactId}`);
+        throw new DealValidationError(
+          `Contact not found or not in organization: ${payload.contactId}`,
+        );
       }
     }
   }
