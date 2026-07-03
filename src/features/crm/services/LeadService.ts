@@ -72,18 +72,20 @@ export class LeadService {
 
     const trimmedName = payload.name.trim();
 
-    await this.checkDuplicateEmail(
-      payload.email,
-      organizationId,
-      supabase
-    );
+const email = payload.email?.trim() ?? payload.email;
+
+await this.checkDuplicateEmail(
+  email,
+  organizationId,
+  supabase
+);
 
     const { data, error } = await supabase
       .from('leads')
       .insert({
         organization_id: organizationId,
         name: trimmedName,
-        email: payload.email,
+        email: email,
         phone: payload.phone,
         source: payload.source,
         status: payload.status ?? 'new',
@@ -104,7 +106,7 @@ export class LeadService {
       data.id,
       {
         name: trimmedName,
-        email: payload.email,
+        email: email,
         phone: payload.phone,
         source: payload.source,
         status: payload.status ?? 'new',
@@ -155,8 +157,8 @@ export class LeadService {
   ): Promise<Lead[]> {
     const supabase = await createClient();
 
-    const page = params.page ?? 1;
-    const pageSize = params.pageSize ?? 25;
+    const page = Math.max(params.page ?? 1, 1);
+const pageSize = Math.max(params.pageSize ?? 25, 1);
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -232,16 +234,19 @@ export class LeadService {
       this.validateName(payload.name);
     }
 
-    if (
-      payload.email !== undefined &&
-      payload.email !== existingLead.email
-    ) {
-      await this.checkDuplicateEmail(
-        payload.email,
-        existingLead.organization_id,
-        supabase
-      );
-    }
+    const email =
+  payload.email?.trim() ?? payload.email;
+
+if (
+  email !== undefined &&
+  email !== existingLead.email
+) {
+  await this.checkDuplicateEmail(
+    email,
+    existingLead.organization_id,
+    supabase
+  );
+}
 
     const updates: Record<string, unknown> = {};
 
@@ -250,7 +255,7 @@ export class LeadService {
     }
 
     if (payload.email !== undefined) {
-      updates.email = payload.email;
+      updates.email = email;
     }
 
     if (payload.phone !== undefined) {
@@ -299,7 +304,57 @@ export class LeadService {
       after: updatedLead,
     });
   }
-    /**
+
+  /**
+   * Deletes a lead.
+   */
+  public async deleteLead(leadId: string): Promise<void> {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('Unauthenticated');
+    }
+
+    const { data: existingLead, error: getError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (getError) {
+      if (getError.code === 'PGRST116') {
+        throw new LeadNotFoundError(leadId);
+      }
+
+      throw new Error(`Failed to retrieve lead: ${getError.message}`);
+    }
+
+    const { error: deleteError } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', leadId)
+      .eq('organization_id', existingLead.organization_id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete lead: ${deleteError.message}`);
+    }
+
+    await createAuditLog({
+      organizationId: existingLead.organization_id,
+      actorId: user.id,
+      action: AuditAction.LEAD_DELETED,
+      resourceType: ResourceType.LEAD,
+      resourceId: leadId,
+      before: existingLead,
+    });
+  }
+
+  /**
    * Validates the lead name.
    */
   private validateName(name: string): void {
