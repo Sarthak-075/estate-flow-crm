@@ -3,7 +3,7 @@
 
 ---
 
-## -- Enable RLS
+-- ## Enable RLS
 
 alter table public.leads enable row level security;
 alter table public.contacts enable row level security;
@@ -14,7 +14,7 @@ alter table public.activities enable row level security;
 
 ---
 
-## -- LEADS
+-- ## LEADS
 
 create policy leads_select
 on public.leads
@@ -50,7 +50,7 @@ and public.is_admin()
 
 ---
 
-## -- CONTACTS
+-- ## CONTACTS
 
 create policy contacts_select
 on public.contacts
@@ -86,7 +86,7 @@ and public.is_admin()
 
 ---
 
-## -- PIPELINES
+-- ## PIPELINES
 
 create policy pipelines_select
 on public.pipelines
@@ -124,7 +124,7 @@ and public.is_admin()
 
 ---
 
-## -- PIPELINE STAGES
+-- ## PIPELINE STAGES
 
 create policy pipeline_stages_select
 on public.pipeline_stages
@@ -187,7 +187,7 @@ and public.is_admin()
 
 ---
 
-## -- DEALS
+-- ## DEALS
 
 create policy deals_select
 on public.deals
@@ -223,7 +223,7 @@ and public.is_admin()
 
 ---
 
-## -- ACTIVITIES
+-- ## ACTIVITIES
 
 create policy activities_select
 on public.activities
@@ -259,7 +259,7 @@ and public.is_admin()
 
 ---
 
-## -- Grants
+-- ## Grants
 
 grant select, insert, update, delete
 on public.leads

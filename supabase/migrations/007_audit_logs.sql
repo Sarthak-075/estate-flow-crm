@@ -20,5 +20,6 @@ create index if not exists audit_logs_resource_idx on public.audit_logs (resourc
 
 -- Enable RLS – owners and admins can read audit logs; others have no access.
 alter table public.audit_logs enable row level security;
-create policy audit_owner_admin on public.audit_logs
-  using (public.is_owner() or public.is_admin());
+create policy audit_owner_admin
+on public.audit_logs
+using (public.is_owner() or public.is_admin());

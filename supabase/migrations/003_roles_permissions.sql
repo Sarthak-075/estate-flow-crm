@@ -23,16 +23,3 @@ create table if not exists public.permissions (
 );
 
 create index if not exists perms_role_idx on public.permissions (role_id);
-
--- Enable RLS
-alter table public.roles enable row level security;
-alter table public.permissions enable row level security;
-
--- Policies for roles (owners and admins can manage roles)
-create policy "owner_admin_roles" on public.roles
-  using (public.is_owner() or public.is_admin())
-  with check (public.is_owner() or public.is_admin());
-
-create policy "owner_admin_permissions" on public.permissions
-  using (public.is_owner() or public.is_admin())
-  with check (public.is_owner() or public.is_admin());

@@ -4,7 +4,7 @@
 
 ---
 
-## -- Leads
+-- ## Leads
 
 create table if not exists public.leads (
 id uuid primary key default gen_random_uuid(),
@@ -58,7 +58,7 @@ on public.leads (organization_id, email);
 
 ---
 
-## -- Contacts
+-- ## Contacts
 
 create table if not exists public.contacts (
 id uuid primary key default gen_random_uuid(),
@@ -105,7 +105,7 @@ on public.contacts (organization_id, email);
 
 ---
 
-## -- Pipelines
+-- ## Pipelines
 
 create table if not exists public.pipelines (
 id uuid primary key default gen_random_uuid(),
@@ -132,7 +132,7 @@ on public.pipelines (organization_id, name);
 
 ---
 
-## -- Pipeline Stages
+-- ## Pipeline Stages
 
 create table if not exists public.pipeline_stages (
 id uuid primary key default gen_random_uuid(),
@@ -163,7 +163,7 @@ on public.pipeline_stages (pipeline_id, name);
 
 ---
 
-## -- Deals
+-- ## Deals
 
 create table if not exists public.deals (
 id uuid primary key default gen_random_uuid(),
@@ -235,7 +235,7 @@ on public.deals (assigned_to);
 
 ---
 
-## -- Activities
+-- ## Activities
 
 create table if not exists public.activities (
 id uuid primary key default gen_random_uuid(),
@@ -306,7 +306,7 @@ on public.activities (occurred_at);
 
 ---
 
-## -- Post-creation foreign key
+-- ## Post-creation foreign key
 
 alter table public.leads
 add constraint leads_converted_contact_fk

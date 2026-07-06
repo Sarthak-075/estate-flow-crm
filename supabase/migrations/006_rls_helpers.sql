@@ -1,51 +1,67 @@
--- 006_rls_helpers.sql
--- Helper functions and RLS policies for Phase 1.1 tables.
--- All RLS decisions are based on the *profiles* table (source of truth for organization)
-
+-- 
 -- ==============================================================
--- Helper Functions
+-- RLS Helper Functions
+-- Must run before any policies that reference these functions.
 -- ==============================================================
 
--- Return the organization_id of the currently authenticated user.
+-- Returns the current user's organization_id.
 create or replace function public.current_user_organization()
-returns uuid language plpgsql stable as $$
-declare
-  org_id uuid;
-begin
-  select p.organization_id into org_id
-  from public.profiles p
-  join auth.users u on u.id = p.id
-  where u.id = (auth.jwt() ->> 'sub')::uuid;
-  return org_id;
-end;
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select organization_id
+  from public.profiles
+  where id = auth.uid();
 $$;
 
--- Return the role name of the current user.
+-- Returns the current user's role.
 create or replace function public.current_user_role()
-returns text language plpgsql stable as $$
-declare
-  role_name text;
-begin
-  select r.name into role_name
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.name
   from public.team_members tm
-  join public.roles r on r.id = tm.role_id
-  where tm.profile_id = (auth.jwt() ->> 'sub')::uuid;
-  return role_name;
-end;
+  join public.roles r
+    on r.id = tm.role_id
+  where tm.profile_id = auth.uid()
+    and tm.organization_id = public.current_user_organization()
+    and tm.status = 'active'
+  limit 1;
 $$;
 
--- Convenience predicate: true if the current user is an owner.
+-- Returns true when the current user is an Owner.
 create or replace function public.is_owner()
-returns boolean language sql stable as $$
-  select public.current_user_role() = 'owner'
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    public.current_user_role() = 'owner',
+    false
+  );
 $$;
 
--- Convenience predicate: true if the current user is an admin (owner or admin).
+-- Returns true when the current user is an Admin.
 create or replace function public.is_admin()
-returns boolean language sql stable as $$
-  select public.current_user_role() in ('owner', 'admin')
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    public.current_user_role() in ('owner', 'admin'),
+    false
+  );
 $$;
-
 -- ==============================================================
 -- Enable RLS on all tables (will be enforced by policies below)
 -- ==============================================================

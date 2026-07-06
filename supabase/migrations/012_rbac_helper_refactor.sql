@@ -18,7 +18,7 @@
 
 ---
 
-## -- current_user_organization()
+-- ## current_user_organization()
 
 create or replace function public.current_user_organization()
 returns uuid
@@ -41,7 +41,7 @@ $$;
 
 ---
 
-## -- current_user_role()
+-- ## current_user_role()
 
 create or replace function public.current_user_role()
 returns text
@@ -66,7 +66,7 @@ $$;
 
 ---
 
-## -- is_owner()
+-- ## is_owner()
 
 create or replace function public.is_owner()
 returns boolean
@@ -78,7 +78,7 @@ $$;
 
 ---
 
-## -- is_admin()
+-- ## is_admin()
 
 create or replace function public.is_admin()
 returns boolean
@@ -90,7 +90,7 @@ $$;
 
 ---
 
-## -- Permissions
+-- ## Permissions
 
 grant execute on function public.current_user_organization()
 to authenticated;
@@ -106,7 +106,7 @@ to authenticated;
 
 ---
 
-## -- Documentation
+-- ## Documentation
 
 comment on function public.current_user_organization() is
 'Returns the organization_id of the current authenticated user from the active team_members row.';
