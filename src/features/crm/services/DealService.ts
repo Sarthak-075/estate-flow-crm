@@ -412,6 +412,57 @@ export class DealService {
     await logDealMoved(existingDeal.organization_id, actorId, dealId, existingDeal, updatedDeal);
   }
 
+  public async deleteDeal(dealId: string): Promise<void> {
+    const supabase = await createClient();
+
+    // ---------- Authentication ----------
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error('Unauthenticated');
+    }
+
+    const actorId = user.id;
+
+    // ---------- Retrieve existing deal ----------
+    const { data: existingDeal, error: getError } = await supabase
+      .from('deals')
+      .select('*')
+      .eq('id', dealId)
+      .single();
+
+    if (getError) {
+      if (getError.code === 'PGRST116') {
+        throw new DealNotFoundError(`Deal '${dealId}' was not found.`);
+      }
+      throw new Error(`Failed to retrieve deal: ${getError.message}`);
+    }
+
+    // ---------- Delete deal ----------
+    const { error: deleteError } = await supabase
+      .from('deals')
+      .delete()
+      .eq('id', dealId)
+      .eq('organization_id', existingDeal.organization_id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete deal: ${deleteError.message}`);
+    }
+
+    // ---------- Audit ----------
+    await createAuditLog({
+      organizationId: existingDeal.organization_id,
+      actorId,
+      action: AuditAction.DEAL_DELETED,
+      resourceType: ResourceType.DEAL,
+      resourceId: dealId,
+      before: existingDeal,
+    });
+  }
+
   // -----------------------------------------------------------------
   // Private helpers (mirroring ContactService pattern)
   // -----------------------------------------------------------------
