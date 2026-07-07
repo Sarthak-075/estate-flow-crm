@@ -40,34 +40,34 @@ export interface Database {
         };
       };
       profiles: {
-        Row: {
-          id: string;
-          organization_id: string;
-          full_name: string | null;
-          email: string;
-          avatar_url: string | null;
-          created_at: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          organization_id: string;
-          full_name?: string | null;
-          email: string;
-          avatar_url?: string | null;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          organization_id?: string;
-          full_name?: string | null;
-          email?: string;
-          avatar_url?: string | null;
-          created_at?: string;
-          updated_at?: string | null;
-        };
-      };
+  Row: {
+    id: string;
+    organization_id: string | null;
+    full_name: string | null;
+    email: string;
+    avatar_url: string | null;
+    created_at: string;
+    updated_at: string | null;
+  };
+  Insert: {
+    id?: string;
+    organization_id?: string | null;
+    full_name?: string | null;
+    email: string;
+    avatar_url?: string | null;
+    created_at?: string;
+    updated_at?: string | null;
+  };
+  Update: {
+    id?: string;
+    organization_id?: string | null;
+    full_name?: string | null;
+    email?: string;
+    avatar_url?: string | null;
+    created_at?: string;
+    updated_at?: string | null;
+  };
+};
       roles: {
         Row: {
           id: string;
