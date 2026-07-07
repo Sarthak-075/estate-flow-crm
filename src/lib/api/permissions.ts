@@ -5,7 +5,7 @@ import { getRequestContext } from "./context";
  * Returns true if the authenticated user has the given role.
  */
 export async function hasRole(role: string): Promise<boolean> {
-  const { supabase, user } = await getRequestContext();
+  const { supabase } = await getRequestContext();
 
   const { data, error } = await supabase.rpc("current_user_role");
 
