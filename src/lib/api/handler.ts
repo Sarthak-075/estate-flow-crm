@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getRequestContext } from "./context";
-import { ApiError } from "./errors";
-import { serverError } from "./responses";
 import type { RequestContext } from "./context";
+import { getRequestContext } from "./context";
+import { serializeError } from "./errorSerializer";
 
 export type ApiHandler<T = unknown> = (
   ctx: RequestContext,
   request: NextRequest,
 ) => Promise<NextResponse<T>>;
 
+/**
+ * Wraps API route handlers with common request context creation
+ * and centralized error handling.
+ */
 export function withApiHandler<T = unknown>(handler: ApiHandler<T>) {
   return async (request: NextRequest): Promise<NextResponse> => {
     try {
@@ -17,23 +20,7 @@ export function withApiHandler<T = unknown>(handler: ApiHandler<T>) {
 
       return await handler(ctx, request);
     } catch (error) {
-      if (error instanceof ApiError) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              message: error.message,
-            },
-          },
-          {
-            status: error.statusCode,
-          },
-        );
-      }
-
-      console.error("Unhandled API error:", error);
-
-      return serverError();
+      return serializeError(error);
     }
   };
 }
