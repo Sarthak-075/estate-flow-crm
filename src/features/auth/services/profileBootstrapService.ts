@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
-import type { AuthenticatedUser } from '@/features/auth/types';
+import { createClient } from "@/lib/supabase/server";
+import type { AuthenticatedUser } from "@/features/auth/types";
 
 /**
  * Ensures a profile exists for an authenticated user.
@@ -10,14 +10,14 @@ import type { AuthenticatedUser } from '@/features/auth/types';
  * - Idempotent.
  */
 export async function ensureProfileExists(
-  user: AuthenticatedUser
+  user: AuthenticatedUser,
 ): Promise<void> {
   const supabase = await createClient();
 
   const { data: existingProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', user.id)
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
     .maybeSingle();
 
   if (profileError) {
@@ -28,14 +28,12 @@ export async function ensureProfileExists(
     return;
   }
 
-  const { error: insertError } = await supabase
-    .from('profiles')
-    .insert({
-      id: user.id,
-      email: user.email,
-      full_name: null,
-      avatar_url: null,
-    });
+  const { error: insertError } = await supabase.from("profiles").insert({
+    id: user.id,
+    email: user.email,
+    full_name: null,
+    avatar_url: null,
+  });
 
   if (insertError) {
     throw insertError;
@@ -48,16 +46,14 @@ export async function ensureProfileExists(
  * Creates a one-time audit entry when a profile
  * is first bootstrapped.
  */
-async function createProfileCreatedAuditLog(
-  userId: string
-): Promise<void> {
+async function createProfileCreatedAuditLog(userId: string): Promise<void> {
   const supabase = await createClient();
 
   const { data: existingAudit, error: auditLookupError } = await supabase
-    .from('audit_logs')
-    .select('id')
-    .eq('actor_id', userId)
-    .eq('action', 'profile_created')
+    .from("audit_logs")
+    .select("id")
+    .eq("actor_id", userId)
+    .eq("action", "profile_created")
     .maybeSingle();
 
   if (auditLookupError) {
@@ -68,18 +64,16 @@ async function createProfileCreatedAuditLog(
     return;
   }
 
-  const { error: insertAuditError } = await supabase
-    .from('audit_logs')
-    .insert({
-      organization_id: null,
-      actor_id: userId,
-      action: 'profile_created',
-      resource_type: 'profile',
-      resource_id: userId,
-      before: null,
-      after: null,
-      ip_address: null,
-    });
+  const { error: insertAuditError } = await supabase.from("audit_logs").insert({
+    organization_id: null,
+    actor_id: userId,
+    action: "profile_created",
+    resource_type: "profile",
+    resource_id: userId,
+    before: null,
+    after: null,
+    ip_address: null,
+  });
 
   if (insertAuditError) {
     throw insertAuditError;

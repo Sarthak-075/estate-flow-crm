@@ -33,6 +33,7 @@ We need a clear and maintainable architecture for our business logic and data ac
 ### Decision
 
 We will adopt a layered architecture consisting of a Service Layer and a Repository Pattern.
+
 - **Repository Pattern:** Handles all direct data access and communication with the database (Supabase). It abstracts away the specifics of data querying.
 - **Service Layer:** Contains the core business logic. It orchestrates calls to one or more repositories to perform complex operations and transactions. API controllers/route handlers will only call service methods.
 
@@ -56,6 +57,7 @@ The system needs to reliably handle side effects and integrations with external 
 ### Decision
 
 We will implement the Event Outbox Pattern.
+
 1.  When a business operation occurs, an event record is written to an `event_outbox` table within the same database transaction.
 2.  A separate background worker process polls this table for new events.
 3.  Upon fetching an event, the worker processes it (e.g., sends it to a job queue or an external webhook).

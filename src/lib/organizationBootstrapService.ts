@@ -5,7 +5,7 @@
  * All privileged DB writes happen through the `supabaseAdmin` client.
  * The function is deliberately isolated – it never runs in the browser.
  */
-import { supabaseAdmin } from '@/lib/supabase/admin';
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
  * Insert default roles for the given organization.
@@ -13,18 +13,16 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
  * operates only on the newly-created organization.
  */
 async function createDefaultRoles(orgId: string): Promise<void> {
-  const roles = ['owner', 'admin', 'manager', 'agent'];
+  const roles = ["owner", "admin", "manager", "agent"];
 
   const payload = roles.map((name) => ({
     organization_id: orgId,
     name,
   }));
 
-  const { error } = await supabaseAdmin
-    .from('roles')
-    .upsert(payload, {
-      onConflict: 'organization_id,name',
-    });
+  const { error } = await supabaseAdmin.from("roles").upsert(payload, {
+    onConflict: "organization_id,name",
+  });
 
   if (error) {
     throw error;
@@ -45,11 +43,11 @@ export async function bootstrapOrganization(params: {
   try {
     // 1. Create organization
     const { data: orgData, error: orgError } = await supabaseAdmin
-      .from('organizations')
+      .from("organizations")
       .insert({
         name: orgName,
       })
-      .select('id')
+      .select("id")
       .single();
 
     if (orgError) {
@@ -63,10 +61,10 @@ export async function bootstrapOrganization(params: {
 
     // 3. Retrieve owner role
     const { data: ownerRole, error: ownerRoleError } = await supabaseAdmin
-      .from('roles')
-      .select('id')
-      .eq('organization_id', orgId)
-      .eq('name', 'owner')
+      .from("roles")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("name", "owner")
       .single();
 
     if (ownerRoleError) {
@@ -77,47 +75,43 @@ export async function bootstrapOrganization(params: {
 
     // 4. Verify profile exists
     const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('id', ownerUserId)
+      .from("profiles")
+      .select("id")
+      .eq("id", ownerUserId)
       .single();
 
     if (profileError || !profile) {
-      throw new Error('Profile not found');
+      throw new Error("Profile not found");
     }
 
     /**
      * Phase 1.3 RBAC Hardening
      * Enforce single active organization membership.
      */
-    const {
-      data: existingMembership,
-      error: membershipLookupError,
-    } = await supabaseAdmin
-      .from('team_members')
-      .select('id')
-      .eq('profile_id', ownerUserId)
-      .eq('status', 'active')
-      .maybeSingle();
+    const { data: existingMembership, error: membershipLookupError } =
+      await supabaseAdmin
+        .from("team_members")
+        .select("id")
+        .eq("profile_id", ownerUserId)
+        .eq("status", "active")
+        .maybeSingle();
 
     if (membershipLookupError) {
       throw membershipLookupError;
     }
 
     if (existingMembership) {
-      throw new Error(
-        'User already belongs to an active organization'
-      );
+      throw new Error("User already belongs to an active organization");
     }
 
     // 5. Create owner membership
     const { error: memberError } = await supabaseAdmin
-      .from('team_members')
+      .from("team_members")
       .insert({
         organization_id: orgId,
         profile_id: ownerUserId,
         role_id: ownerRoleId,
-        status: 'active',
+        status: "active",
       });
 
     if (memberError) {
@@ -126,10 +120,10 @@ export async function bootstrapOrganization(params: {
 
     // 6. Create organization settings
     const { error: settingsError } = await supabaseAdmin
-      .from('organization_settings')
+      .from("organization_settings")
       .insert({
         organization_id: orgId,
-        timezone: 'UTC',
+        timezone: "UTC",
       });
 
     if (settingsError) {
@@ -138,11 +132,11 @@ export async function bootstrapOrganization(params: {
 
     // 7. Link profile to organization
     const { error: profileUpdateError } = await supabaseAdmin
-      .from('profiles')
+      .from("profiles")
       .update({
         organization_id: orgId,
       })
-      .eq('id', ownerUserId);
+      .eq("id", ownerUserId);
 
     if (profileUpdateError) {
       throw profileUpdateError;
@@ -150,12 +144,12 @@ export async function bootstrapOrganization(params: {
 
     // 8. Audit log
     const { error: auditError } = await supabaseAdmin
-      .from('audit_logs')
+      .from("audit_logs")
       .insert({
         organization_id: orgId,
         actor_id: ownerUserId,
-        action: 'organization_created',
-        resource_type: 'organization',
+        action: "organization_created",
+        resource_type: "organization",
         resource_id: orgId,
       });
 
@@ -169,15 +163,9 @@ export async function bootstrapOrganization(params: {
   } catch (error) {
     if (orgId) {
       try {
-        await supabaseAdmin
-          .from('organizations')
-          .delete()
-          .eq('id', orgId);
+        await supabaseAdmin.from("organizations").delete().eq("id", orgId);
       } catch (rollbackError) {
-        console.error(
-          'Organization bootstrap rollback failed',
-          rollbackError
-        );
+        console.error("Organization bootstrap rollback failed", rollbackError);
       }
     }
 

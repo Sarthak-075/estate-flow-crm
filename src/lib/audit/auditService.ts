@@ -1,72 +1,72 @@
 // src/lib/audit/auditService.ts
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Every auditable action in the system.
  */
 export enum AuditAction {
-  PROFILE_CREATED = 'PROFILE_CREATED',
-  PROFILE_UPDATED = 'PROFILE_UPDATED',
+  PROFILE_CREATED = "PROFILE_CREATED",
+  PROFILE_UPDATED = "PROFILE_UPDATED",
 
-  ORGANIZATION_CREATED = 'ORGANIZATION_CREATED',
-  ORGANIZATION_UPDATED = 'ORGANIZATION_UPDATED',
+  ORGANIZATION_CREATED = "ORGANIZATION_CREATED",
+  ORGANIZATION_UPDATED = "ORGANIZATION_UPDATED",
 
-  TEAM_MEMBER_CREATED = 'TEAM_MEMBER_CREATED',
-  TEAM_MEMBER_UPDATED = 'TEAM_MEMBER_UPDATED',
-  TEAM_MEMBER_REMOVED = 'TEAM_MEMBER_REMOVED',
+  TEAM_MEMBER_CREATED = "TEAM_MEMBER_CREATED",
+  TEAM_MEMBER_UPDATED = "TEAM_MEMBER_UPDATED",
+  TEAM_MEMBER_REMOVED = "TEAM_MEMBER_REMOVED",
 
-  ROLE_CREATED = 'ROLE_CREATED',
-  ROLE_UPDATED = 'ROLE_UPDATED',
-  ROLE_DELETED = 'ROLE_DELETED',
+  ROLE_CREATED = "ROLE_CREATED",
+  ROLE_UPDATED = "ROLE_UPDATED",
+  ROLE_DELETED = "ROLE_DELETED",
 
-  LEAD_CREATED = 'LEAD_CREATED',
-  LEAD_UPDATED = 'LEAD_UPDATED',
-  LEAD_DELETED = 'LEAD_DELETED',
+  LEAD_CREATED = "LEAD_CREATED",
+  LEAD_UPDATED = "LEAD_UPDATED",
+  LEAD_DELETED = "LEAD_DELETED",
 
-  CONTACT_CREATED = 'CONTACT_CREATED',
-  CONTACT_UPDATED = 'CONTACT_UPDATED',
-  CONTACT_DELETED = 'CONTACT_DELETED',
+  CONTACT_CREATED = "CONTACT_CREATED",
+  CONTACT_UPDATED = "CONTACT_UPDATED",
+  CONTACT_DELETED = "CONTACT_DELETED",
 
-  PIPELINE_CREATED = 'PIPELINE_CREATED',
-  PIPELINE_UPDATED = 'PIPELINE_UPDATED',
-  PIPELINE_DELETED = 'PIPELINE_DELETED',
+  PIPELINE_CREATED = "PIPELINE_CREATED",
+  PIPELINE_UPDATED = "PIPELINE_UPDATED",
+  PIPELINE_DELETED = "PIPELINE_DELETED",
 
-  PIPELINE_STAGE_CREATED = 'PIPELINE_STAGE_CREATED',
-  PIPELINE_STAGE_UPDATED = 'PIPELINE_STAGE_UPDATED',
-  PIPELINE_STAGE_DELETED = 'PIPELINE_STAGE_DELETED',
+  PIPELINE_STAGE_CREATED = "PIPELINE_STAGE_CREATED",
+  PIPELINE_STAGE_UPDATED = "PIPELINE_STAGE_UPDATED",
+  PIPELINE_STAGE_DELETED = "PIPELINE_STAGE_DELETED",
 
-  DEAL_CREATED = 'DEAL_CREATED',
-  DEAL_UPDATED = 'DEAL_UPDATED',
-  DEAL_DELETED = 'DEAL_DELETED',
+  DEAL_CREATED = "DEAL_CREATED",
+  DEAL_UPDATED = "DEAL_UPDATED",
+  DEAL_DELETED = "DEAL_DELETED",
 
-  DEAL_MOVED = 'DEAL_MOVED',
-  DEAL_WON = 'DEAL_WON',
-  DEAL_LOST = 'DEAL_LOST',
+  DEAL_MOVED = "DEAL_MOVED",
+  DEAL_WON = "DEAL_WON",
+  DEAL_LOST = "DEAL_LOST",
 
-  ACTIVITY_CREATED = 'ACTIVITY_CREATED',
-  ACTIVITY_UPDATED = 'ACTIVITY_UPDATED',
-  ACTIVITY_DELETED = 'ACTIVITY_DELETED',
+  ACTIVITY_CREATED = "ACTIVITY_CREATED",
+  ACTIVITY_UPDATED = "ACTIVITY_UPDATED",
+  ACTIVITY_DELETED = "ACTIVITY_DELETED",
 }
 
 /**
  * Resources that can be audited.
  */
 export enum ResourceType {
-  PROFILE = 'profile',
-  ORGANIZATION = 'organization',
+  PROFILE = "profile",
+  ORGANIZATION = "organization",
 
-  TEAM_MEMBER = 'team_member',
-  ROLE = 'role',
+  TEAM_MEMBER = "team_member",
+  ROLE = "role",
 
-  LEAD = 'lead',
-  CONTACT = 'contact',
+  LEAD = "lead",
+  CONTACT = "contact",
 
-  PIPELINE = 'pipeline',
-  PIPELINE_STAGE = 'pipeline_stage',
+  PIPELINE = "pipeline",
+  PIPELINE_STAGE = "pipeline_stage",
 
-  DEAL = 'deal',
-  ACTIVITY = 'activity',
+  DEAL = "deal",
+  ACTIVITY = "activity",
 }
 
 /**
@@ -96,7 +96,7 @@ export class AuditLogError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
 
-    this.name = 'AuditLogError';
+    this.name = "AuditLogError";
     this.cause = cause;
   }
 }
@@ -123,18 +123,16 @@ export async function createAuditLog(
     ipAddress = null,
   } = input;
 
-  const { error } = await supabase
-    .from('audit_logs')
-    .insert({
-      organization_id: organizationId,
-      actor_id: actorId,
-      action,
-      resource_type: resourceType,
-      resource_id: resourceId,
-      before,
-      after,
-      ip_address: ipAddress,
-    });
+  const { error } = await supabase.from("audit_logs").insert({
+    organization_id: organizationId,
+    actor_id: actorId,
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    before,
+    after,
+    ip_address: ipAddress,
+  });
 
   if (error) {
     throw new AuditLogError(
@@ -631,7 +629,7 @@ export async function logTeamMemberUpdated(
 export async function logTeamMemberRemoved(
   organizationId: string,
   actorId: string,
- memberId: string,
+  memberId: string,
   before?: Record<string, unknown>,
 ): Promise<void> {
   await createAuditLog({
