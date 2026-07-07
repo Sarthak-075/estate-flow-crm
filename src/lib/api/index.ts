@@ -15,3 +15,4 @@ export * from "./auth";
 export * from "./context";
 export * from "./permissions";
 export * from "./authorize";
+export * from "./handler";
